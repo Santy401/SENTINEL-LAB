@@ -13,6 +13,7 @@ namespace realtime {
 class UtcClock {
  public:
   bool synced() const { return synced_; }
+  // Ignores implausible gateway/NTP epochs outside 2020-01-01..2100-01-01.
   void sync(int64_t epochMs, uint32_t monotonicMs);
   void clear();
 

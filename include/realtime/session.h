@@ -31,7 +31,9 @@ struct InboundMessage {
 // Per-connection identity and outbound sequence. The triple source +
 // sessionId + sequence is unique because sessionId embeds the boot identifier,
 // a producer kind, the connection slot and a process-wide generation counter.
-// A reconnect into the same slot therefore never reuses a sessionId.
+// A reconnect into the same slot therefore never reuses a sessionId. The first
+// accepted inbound source is bound to the connection so later frames cannot
+// change the peer identity mid-session.
 class SessionState {
  public:
   void begin(uint8_t slot, const char* bootId, bool system = false);
@@ -41,6 +43,9 @@ class SessionState {
   void recordInbound(uint64_t sequence);
   const char* sessionId() const { return sessionId_; }
   const char* source() const { return kFirmwareSource; }
+  bool hasInboundSource() const { return inboundSource_[0] != '\0'; }
+  const char* inboundSource() const { return inboundSource_; }
+  void bindInboundSource(const char* source);
   bool helloReceived() const { return helloReceived_; }
   void markHello() { helloReceived_ = true; }
   bool privileged() const { return privileged_; }
@@ -48,6 +53,7 @@ class SessionState {
 
  private:
   char sessionId_[65]{};
+  char inboundSource_[65]{};
   uint64_t sequence_ = 0;
   uint64_t lastInboundSequence_ = 0;
   bool hasInboundSequence_ = false;
@@ -55,14 +61,15 @@ class SessionState {
   bool privileged_ = false;
 };
 
-// Stateless validation of inbound Protocol v1 frames. Validation failures are
-// reported with fixed strings; rejected payloads are never echoed.
+// Validation of inbound Protocol v1 frames. Validation failures are reported
+// with fixed strings; rejected payloads are never echoed. Accepted frames bind
+// their source to the session, so the validator updates session identity state.
 const char* protocolErrorCode(uint8_t code);
 
 class InboundValidator {
  public:
   InboundMessage validate(const char* json, size_t length, uint32_t nowMs,
-                          bool authenticated, const SessionState& session) const;
+                          bool authenticated, SessionState& session) const;
 };
 
 }  // namespace realtime

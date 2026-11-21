@@ -9,18 +9,30 @@ namespace realtime {
 namespace {
 
 constexpr char kGuid[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+constexpr char kSubprotocol[] = "sentinel.v1";
+
+char asciiLower(char value) {
+  return value >= 'A' && value <= 'Z'
+             ? static_cast<char>(value - 'A' + 'a')
+             : value;
+}
 
 bool startsWithIgnoreCase(const char* text, size_t length, const char* prefix) {
   const size_t prefixLength = strlen(prefix);
   if (length < prefixLength) return false;
   for (size_t i = 0; i < prefixLength; ++i) {
-    char a = text[i];
-    char b = prefix[i];
-    if (a >= 'A' && a <= 'Z') a = static_cast<char>(a - 'A' + 'a');
-    if (b >= 'A' && b <= 'Z') b = static_cast<char>(b - 'A' + 'a');
-    if (a != b) return false;
+    if (asciiLower(text[i]) != asciiLower(prefix[i])) return false;
   }
   return true;
+}
+
+// The path is case-sensitive; only the method and the HTTP version may differ
+// in case. Comparing the whole line also rejects prefixes such as
+// "/realtime HTTP/1.10" and alternate paths.
+bool isRealtimeRequestLine(const char* text, size_t length) {
+  return startsWithIgnoreCase(text, length, "GET /realtime HTTP/1.1") &&
+         length == strlen("GET /realtime HTTP/1.1") &&
+         memcmp(text + strlen("GET "), "/realtime", strlen("/realtime")) == 0;
 }
 
 const char* trim(const char* text, size_t& length) {
@@ -34,6 +46,64 @@ const char* trim(const char* text, size_t& length) {
     --length;
   }
   return text;
+}
+
+// Checks a comma-separated RFC token list for one exact token. Tokens such as
+// "websocket-evil" or "upgradefoo" must not satisfy "websocket"/"upgrade".
+bool hasToken(const char* value, size_t length, const char* token,
+              bool ignoreCase) {
+  while (length) {
+    while (length && (*value == ' ' || *value == '\t')) {
+      ++value;
+      --length;
+    }
+    size_t tokenLength = 0;
+    while (tokenLength < length && value[tokenLength] != ',' &&
+           value[tokenLength] != ' ' && value[tokenLength] != '\t') {
+      ++tokenLength;
+    }
+    if (tokenLength == strlen(token)) {
+      bool match = true;
+      for (size_t i = 0; i < tokenLength; ++i) {
+        const char a = ignoreCase ? asciiLower(value[i]) : value[i];
+        const char b = ignoreCase ? asciiLower(token[i]) : token[i];
+        if (a != b) {
+          match = false;
+          break;
+        }
+      }
+      if (match) return true;
+    }
+    while (length && *value != ',') {
+      ++value;
+      --length;
+    }
+    if (!length) break;
+    ++value;
+    --length;
+  }
+  return false;
+}
+
+int base64Index(char value) {
+  if (value >= 'A' && value <= 'Z') return value - 'A';
+  if (value >= 'a' && value <= 'z') return value - 'a' + 26;
+  if (value >= '0' && value <= '9') return value - '0' + 52;
+  if (value == '+') return 62;
+  if (value == '/') return 63;
+  return -1;
+}
+
+// A WebSocket key encodes exactly 16 bytes: 24 canonical base64 characters,
+// the last two of them padding, and zero unused bits before that padding.
+bool isValidWebSocketKey(const char* value, size_t length) {
+  if (length != 24 || value[22] != '=' || value[23] != '=') return false;
+  for (size_t i = 0; i < 22; ++i) {
+    const int index = base64Index(value[i]);
+    if (index < 0) return false;
+    if (i == 21 && (index & 0x0F) != 0) return false;
+  }
+  return true;
 }
 
 uint32_t rotateLeft(uint32_t value, unsigned bits) {
@@ -151,32 +221,52 @@ bool parseHandshake(const char* request, size_t length,
     if (lineLength && line[lineLength - 1] == '\r') --lineLength;
 
     if (!requestLineSeen) {
-      if (!startsWithIgnoreCase(line, lineLength, "GET /realtime HTTP/1.1")) {
-        return false;
-      }
+      if (!isRealtimeRequestLine(line, lineLength)) return false;
       requestLineSeen = true;
     } else if (startsWithIgnoreCase(line, lineLength, "Upgrade:")) {
-      size_t valueLength = lineLength - 8;
-      const char* value = trim(line + 8, valueLength);
-      if (startsWithIgnoreCase(value, valueLength, "websocket")) {
+      size_t valueLength = lineLength - strlen("Upgrade:");
+      const char* value = trim(line + strlen("Upgrade:"), valueLength);
+      if (hasToken(value, valueLength, "websocket", true)) {
         result.upgrade = true;
       }
     } else if (startsWithIgnoreCase(line, lineLength, "Connection:")) {
-      size_t valueLength = lineLength - 11;
-      const char* value = trim(line + 11, valueLength);
-      if (startsWithIgnoreCase(value, valueLength, "upgrade")) {
+      size_t valueLength = lineLength - strlen("Connection:");
+      const char* value = trim(line + strlen("Connection:"), valueLength);
+      if (hasToken(value, valueLength, "upgrade", true)) {
         result.connection = true;
       }
+    } else if (startsWithIgnoreCase(line, lineLength,
+                                    "Sec-WebSocket-Version:")) {
+      constexpr char kHeader[] = "Sec-WebSocket-Version:";
+      size_t valueLength = lineLength - strlen(kHeader);
+      const char* value = trim(line + strlen(kHeader), valueLength);
+      result.versionPresent = true;
+      if (hasToken(value, valueLength, "13", false)) {
+        result.version13 = true;
+      }
+    } else if (startsWithIgnoreCase(line, lineLength,
+                                    "Sec-WebSocket-Protocol:")) {
+      constexpr char kHeader[] = "Sec-WebSocket-Protocol:";
+      size_t valueLength = lineLength - strlen(kHeader);
+      const char* value = trim(line + strlen(kHeader), valueLength);
+      if (hasToken(value, valueLength, kSubprotocol, false)) {
+        result.subprotocol = true;
+      }
     } else if (startsWithIgnoreCase(line, lineLength, "Sec-WebSocket-Key:")) {
-      size_t valueLength = lineLength - 18;
-      const char* value = trim(line + 18, valueLength);
-      if (valueLength && valueLength < sizeof(result.key)) {
+      constexpr char kHeader[] = "Sec-WebSocket-Key:";
+      size_t valueLength = lineLength - strlen(kHeader);
+      const char* value = trim(line + strlen(kHeader), valueLength);
+      if (isValidWebSocketKey(value, valueLength) &&
+          valueLength < sizeof(result.key)) {
         memcpy(result.key, value, valueLength);
         result.key[valueLength] = '\0';
+      } else {
+        result.key[0] = '\0';
       }
     } else if (startsWithIgnoreCase(line, lineLength, "Authorization:")) {
-      size_t valueLength = lineLength - 14;
-      const char* value = trim(line + 14, valueLength);
+      constexpr char kHeader[] = "Authorization:";
+      size_t valueLength = lineLength - strlen(kHeader);
+      const char* value = trim(line + strlen(kHeader), valueLength);
       if (valueLength && valueLength < sizeof(result.authorization)) {
         memcpy(result.authorization, value, valueLength);
         result.authorization[valueLength] = '\0';
@@ -187,7 +277,15 @@ bool parseHandshake(const char* request, size_t length,
     line = lineEnd + 1;
   }
 
-  result.valid = result.upgrade && result.connection && result.key[0] != '\0';
+  result.valid = result.upgrade && result.connection && result.version13 &&
+                 result.subprotocol && result.key[0] != '\0';
+  if (result.valid) {
+    result.status = HandshakeStatus::Ok;
+  } else if (result.versionPresent && !result.version13) {
+    result.status = HandshakeStatus::UpgradeRequired;
+  } else {
+    result.status = HandshakeStatus::BadRequest;
+  }
   return result.valid;
 }
 

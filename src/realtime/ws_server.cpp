@@ -85,9 +85,18 @@ void RealtimeServer::handleHandshake(Peer& peer, size_t slot, uint32_t nowMs) {
   HandshakeRequest request;
   if (!parseHandshake(peer.request, static_cast<size_t>(terminator - peer.request),
                       request)) {
-    static const char kBad[] =
-        "HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n";
-    peer.client.write(kBad, sizeof(kBad) - 1);
+    if (request.status == HandshakeStatus::UpgradeRequired) {
+      static const char kBadVersion[] =
+          "HTTP/1.1 426 Upgrade Required\r\n"
+          "Connection: close\r\n"
+          "Sec-WebSocket-Version: 13\r\n"
+          "\r\n";
+      peer.client.write(kBadVersion, sizeof(kBadVersion) - 1);
+    } else {
+      static const char kBad[] =
+          "HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n";
+      peer.client.write(kBad, sizeof(kBad) - 1);
+    }
     closePeer(peer, "client-request");
     return;
   }

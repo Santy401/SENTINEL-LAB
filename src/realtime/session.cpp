@@ -80,8 +80,14 @@ void SessionState::begin(uint8_t slot, const char* bootId, bool system) {
   sequence_ = 0;
   lastInboundSequence_ = 0;
   hasInboundSequence_ = false;
+  inboundSource_[0] = '\0';
   helloReceived_ = false;
   privileged_ = false;
+}
+
+void SessionState::bindInboundSource(const char* source) {
+  if (hasInboundSource()) return;
+  snprintf(inboundSource_, sizeof(inboundSource_), "%s", source);
 }
 
 uint64_t SessionState::nextSequence() {
@@ -97,7 +103,7 @@ void SessionState::recordInbound(uint64_t sequence) {
 InboundMessage InboundValidator::validate(const char* json, size_t length,
                                            uint32_t nowMs,
                                            bool authenticated,
-                                           const SessionState& session) const {
+                                           SessionState& session) const {
   (void)nowMs;
   if (!json || length == 0 || length > kWsMaxFrameBytes) {
     return reject(kInvalidEnvelopeCode, "invalid envelope");
@@ -132,6 +138,30 @@ InboundMessage InboundValidator::validate(const char* json, size_t length,
   if (!validIdentifier(source, false)) {
     return reject(kInvalidEnvelopeCode, "invalid envelope");
   }
+
+  // Protocol v1 requires a 1-64 character sessionId. Legacy clients may omit
+  // it; when present it must be well formed and match this peer's session.
+  const JsonVariantConst sessionField = document["sessionId"];
+  if (!sessionField.isNull() && !sessionField.is<const char*>()) {
+    return reject(kInvalidEnvelopeCode, "invalid envelope");
+  }
+  const char* sessionId = valueOrEmpty(sessionField);
+  if (!sessionField.isNull()) {
+    if (!validIdentifier(sessionId, true)) {
+      return reject(kInvalidEnvelopeCode, "invalid envelope");
+    }
+    if (session.sessionId()[0] != '\0' &&
+        strcmp(sessionId, session.sessionId()) != 0) {
+      return reject(kUnauthorizedCode, "invalid envelope");
+    }
+  }
+  // The peer's source is assigned by its first accepted frame and cannot be
+  // changed later in the same session.
+  if (session.hasInboundSource() &&
+      strcmp(source, session.inboundSource()) != 0) {
+    return reject(kUnauthorizedCode, "invalid envelope");
+  }
+
   const char* timestamp = valueOrEmpty(document["timestamp"]);
   int64_t epochMs = 0;
   if (!UtcClock::parse(timestamp, strlen(timestamp), epochMs)) {
@@ -173,6 +203,9 @@ InboundMessage InboundValidator::validate(const char* json, size_t length,
              supported);
   }
 
+  session.bindInboundSource(source);
+  snprintf(result.source, sizeof(result.source), "%s",
+           session.inboundSource());
   return result;
 }
 

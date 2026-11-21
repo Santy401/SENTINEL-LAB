@@ -8,6 +8,11 @@ namespace {
 
 constexpr int64_t kMsPerDay = 86400000;
 
+// Plausible window for gateway/NTP wall-clock input: 2020-01-01 through
+// 2100-01-01. A value outside it is a bad sync source, not a valid epoch.
+constexpr int64_t kMinSyncEpochMs = 1577836800000LL;
+constexpr int64_t kMaxSyncEpochMs = 4102444800000LL;
+
 bool leap(int year) {
   return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
 }
@@ -65,6 +70,7 @@ int64_t floorDiv(int64_t value, int64_t divisor) {
 }  // namespace
 
 void UtcClock::sync(int64_t epochMs, uint32_t monotonicMs) {
+  if (epochMs < kMinSyncEpochMs || epochMs > kMaxSyncEpochMs) return;
   epochAtSync_ = epochMs;
   monotonicAtSync_ = monotonicMs;
   synced_ = true;
@@ -79,9 +85,10 @@ void UtcClock::clear() {
 bool UtcClock::format(uint32_t monotonicMs, char* output,
                       size_t capacity) const {
   if (!synced_ || !output || capacity < 25) return false;
-  const int64_t epoch = epochAtSync_ +
-                        static_cast<int64_t>(monotonicMs) -
-                        static_cast<int64_t>(monotonicAtSync_);
+  // millis() wraps every 49.7 days. Unsigned subtraction keeps a wrap short
+  // and forward-going before widening to int64_t for the UTC calculation.
+  const uint32_t elapsed = monotonicMs - monotonicAtSync_;
+  const int64_t epoch = epochAtSync_ + static_cast<int64_t>(elapsed);
   const int64_t days = floorDiv(epoch, kMsPerDay);
   int64_t millis = epoch - days * kMsPerDay;
   if (millis < 0) millis += kMsPerDay;

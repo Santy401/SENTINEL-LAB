@@ -32,19 +32,48 @@ std::vector<uint8_t> maskedFrame(WsOpcode opcode, const std::string& text) {
   return frame;
 }
 
-WiFiClient connectClient(bool withAuth) {
+struct HandshakeOptions {
+  bool withAuth = false;
+  bool hasVersion = true;
+  bool hasProtocol = true;
+  std::string version = "13";
+  std::string protocol = "sentinel.v1";
+};
+
+// Realistic RFC 6455 client request, including the version and subprotocol
+// required by this endpoint.
+std::string buildHandshake(const HandshakeOptions& options) {
   std::string request =
       "GET /realtime HTTP/1.1\r\n"
       "Host: sentinel.local\r\n"
+      "Origin: http://sentinel.local\r\n"
       "Upgrade: websocket\r\n"
-      "Connection: Upgrade\r\n"
+      "Connection: keep-alive, Upgrade\r\n"
       "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n";
-  if (withAuth) request += "Authorization: Bearer local-token-123\r\n";
+  if (options.hasVersion) {
+    request += "Sec-WebSocket-Version: " + options.version + "\r\n";
+  }
+  if (options.hasProtocol) {
+    request += "Sec-WebSocket-Protocol: " + options.protocol + "\r\n";
+  }
+  if (options.withAuth) {
+    request += "Authorization: Bearer local-token-123\r\n";
+  }
   request += "\r\n";
+  return request;
+}
+
+WiFiClient connectClientWith(const HandshakeOptions& options) {
   WiFiClient client = WiFiClient::create();
-  client.push(request);
+  client.push(buildHandshake(options));
   gPendingWiFiClients.push_back(client);
   return client;
+}
+
+WiFiClient connectClient(bool withAuth) {
+  HandshakeOptions options;
+  options.withAuth = withAuth;
+  return connectClientWith(options);
 }
 
 std::string gatewayHello(uint64_t sequence) {
@@ -84,6 +113,23 @@ void finishHandshake(RealtimeServer& server, WiFiClient& client,
   assert(client.sent().find("101 Switching Protocols") != std::string::npos);
 }
 
+void expectHandshakeRejected(RealtimeServer& server,
+                             const HandshakeOptions& options, uint32_t nowMs,
+                             const char* statusLine,
+                             const char* requiredHeader = nullptr) {
+  gPendingWiFiClients.clear();
+  WiFiClient client = connectClientWith(options);
+  server.loop(nowMs);
+  const std::string sent = client.sent();
+  assert(sent.find(statusLine) != std::string::npos);
+  assert(sent.find("101 Switching Protocols") == std::string::npos);
+  if (requiredHeader) {
+    assert(sent.find(requiredHeader) != std::string::npos);
+  }
+  assert(!client.connected());
+  assert(server.clientCount() == 0);
+}
+
 }  // namespace
 
 int main() {
@@ -93,6 +139,41 @@ int main() {
   const AuthGuard auth("local-token-123");
   RealtimeServer server;
   server.begin(81, "boot1234", clock, adapter, auth);
+
+  // Unsupported versions require an explicit 426 with the supported version.
+  HandshakeOptions oldVersion;
+  oldVersion.version = "12";
+  expectHandshakeRejected(server, oldVersion, 900,
+                          "HTTP/1.1 426 Upgrade Required",
+                          "Sec-WebSocket-Version: 13");
+
+  // Missing version, missing subprotocol, and a different subprotocol are
+  // plain bad requests: the server must not answer with 101.
+  HandshakeOptions missingVersion;
+  missingVersion.hasVersion = false;
+  expectHandshakeRejected(server, missingVersion, 901,
+                          "HTTP/1.1 400 Bad Request");
+  HandshakeOptions missingProtocol;
+  missingProtocol.hasProtocol = false;
+  expectHandshakeRejected(server, missingProtocol, 902,
+                          "HTTP/1.1 400 Bad Request");
+  HandshakeOptions wrongProtocol;
+  wrongProtocol.protocol = "sentinel.v2";
+  expectHandshakeRejected(server, wrongProtocol, 903,
+                          "HTTP/1.1 400 Bad Request");
+
+  // A standard client may offer several versions/subprotocols in one list.
+  HandshakeOptions listHeaders;
+  listHeaders.version = "8, 13";
+  listHeaders.protocol = "chat, sentinel.v1";
+  gPendingWiFiClients.clear();
+  WiFiClient listClient = connectClientWith(listHeaders);
+  finishHandshake(server, listClient, 910);
+  assert(listClient.sent().find("Sec-WebSocket-Protocol: sentinel.v1") !=
+         std::string::npos);
+  listClient.push(maskedFrame(WsOpcode::Close, ""));
+  server.loop(911);
+  assert(server.clientCount() == 0);
 
   // Full lifecycle: authenticated handshake, privileged hello, ordered goodbye.
   gPendingWiFiClients.clear();
