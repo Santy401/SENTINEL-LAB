@@ -1,0 +1,47 @@
+name: Hardware validation
+description: Record a physical validation run
+title: "test: "
+labels: ["hardware-validation"]
+body:
+  - type: input
+    id: date
+    attributes:
+      label: Date
+      placeholder: YYYY-MM-DD
+    validations:
+      required: true
+  - type: input
+    id: board
+    attributes:
+      label: Board identity
+      placeholder: ESP32-S3 MAC or USB bridge
+    validations:
+      required: true
+  - type: input
+    id: firmware_hash
+    attributes:
+      label: Firmware SHA256
+    validations:
+      required: true
+  - type: textarea
+    id: procedure
+    attributes:
+      label: Procedure
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Real measurements
+      description: RSSI, distance, motion or endpoint responses. Do not paste simulated values as real.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: Identity verified before flashing
+        - label: NVS not erased
+        - label: Host network unchanged
+        - label: No production deployment

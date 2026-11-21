@@ -1,0 +1,32 @@
+name: Engineering task
+description: Track implementation work with verification criteria
+title: "chore: "
+labels: ["engineering"]
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Commands, tests and evidence required to close the task.
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: No hardware flash required
+        - label: No production deployment required
+        - label: No secrets involved

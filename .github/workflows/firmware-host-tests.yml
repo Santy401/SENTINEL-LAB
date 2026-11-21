@@ -1,0 +1,58 @@
+name: Firmware host tests
+
+on:
+  push:
+    paths:
+      - "platformio.ini"
+      - "include/**"
+      - "src/**"
+      - "test/**"
+      - "tools/**"
+      - "integrations/n8n/**"
+      - ".github/workflows/firmware-host-tests.yml"
+  pull_request:
+    paths:
+      - "platformio.ini"
+      - "include/**"
+      - "src/**"
+      - "test/**"
+      - "tools/**"
+      - "integrations/n8n/**"
+      - ".github/workflows/firmware-host-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/packages
+            .pio/libdeps
+          key: ${{ runner.os }}-pio-host-tests-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-host-tests-
+
+      - name: Install PlatformIO
+        run: python -m pip install --upgrade pip platformio
+
+      - name: Prepare host dependencies
+        run: pio run -e sentinel_esp32s3_n16r8_rf
+
+      - name: Run host checks
+        run: python3 tools/check_software.py

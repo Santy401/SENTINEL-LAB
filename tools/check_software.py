@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Reproducible host checks; writes build artifacts only inside this repository."""
+from pathlib import Path
+import ast
+import json
+import os
+import re
+import subprocess
+import sys
+root=Path(__file__).resolve().parents[1]
+os.chdir(root)
+(root/'build').mkdir(exist_ok=True)
+env=dict(os.environ,TMPDIR=str(root/'build'))
+def run(args, **kwargs):
+    subprocess.run(args,check=True,env=env,**kwargs)
+run([sys.executable,'scripts/check-repository.py'])
+run([sys.executable,'scripts/check-conventional-commit.py','--self-test'])
+def host(name,sources,includes=()):
+    run(['g++','-std=c++17','-Wall','-Wextra','-Werror','-Iinclude',*includes,*sources,'-o',f'build/{name}'])
+    run([f'build/{name}'])
+host('test_algorithm',['test/test_algorithm.cpp'])
+host('test_motion_engine',['test/test_motion_engine.cpp','src/v02/motion_engine.cpp'])
+host('test_rf',['test/test_rf.cpp'])
+host('test_rf_monitor',['test/test_rf_monitor.cpp','src/rf/rf_monitor.cpp'],['-Itest/stubs'])
+host('test_event_json',['test/test_event_json.cpp'],['-I.pio/libdeps/sentinel_esp32s3_n16r8_rf/ArduinoJson/src'])
+host('test_motion_ingest',['test/test_motion_ingest.cpp','src/rf/motion_ingest.cpp','src/v02/motion_engine.cpp'],['-I.pio/libdeps/sentinel_esp32s3_n16r8_rf/ArduinoJson/src'])
+for path in ['src/v02/dashboard_html.h','src/rf/dashboard_html.h','src/rf/capture_html.h','src/rf/motion_setup_html.h']:
+    text=Path(path).read_text()
+    # Firefox iOS shows this native toast on shake-to-summarize; it must never be
+    # synthesized by a page we serve, nor used to mask an API/motion failure.
+    assert 'Resumen no disponible' not in text, f'Firefox toast text leaked into {path}'
+    scripts=re.findall(r'<script>(.*?)</script>',text,re.S)
+    for script in scripts:
+        run(['node','--check'],input=script,text=True)
+    ids=re.findall(r'\bid="([^"\s]+)"',text)
+    assert len(ids)==len(set(ids)),f'duplicate DOM id in {path}'
+    references=set(re.findall(r"(?:\$|document\.getElementById)\('([^']+)'\)",''.join(scripts)))
+    assert references<=set(ids),(path,references-set(ids))
+    if path=='src/rf/dashboard_html.h':
+        # Real HTTP/motion failures stay explicit in #status; they are not
+        # replaced by a generic browser-style toast.
+        assert "SIN DATOS ACTUALES · '+e.message" in text
+        assert "$('distance').textContent='No disponible'" in text
+    print(f'{path}: JS syntax and {len(references)} DOM references OK')
+for path in Path('tools').glob('*.py'):
+    ast.parse(path.read_text())
+workflow=json.loads(Path('integrations/n8n/sentinel-rf.workflow.json').read_text())
+assert workflow['active'] is False
+for node in workflow['nodes']:
+    if node['type']=='n8n-nodes-base.code':
+        run(['node','--check'],input='function check(){'+node['parameters']['jsCode']+'}',text=True)
+print('Python syntax and inactive n8n workflow syntax OK')
+
+run(['node','test/test_workflow.cjs'])

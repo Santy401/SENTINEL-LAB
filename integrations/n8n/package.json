@@ -1,0 +1,24 @@
+{
+  "name": "n8n-nodes-sentinel",
+  "version": "0.3.0",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/SentinelTelegram.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/SentinelTelegram.node.js"
+    ]
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "n8n-workflow": "^1.82.0"
+  }
+}

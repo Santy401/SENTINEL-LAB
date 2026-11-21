@@ -1,0 +1,157 @@
+{
+  "name": "SENTINEL RF — optional local receiver",
+  "active": false,
+  "nodes": [
+    {
+      "id": "receive",
+      "name": "Authenticated webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sentinel-rf",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "validate",
+      "name": "Validate and deduplicate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const e=$json.body;\nconst allowed=['DEVICE_CONNECTED','DEVICE_DISCONNECTED','SIGNAL_WEAK','SIGNAL_RECOVERED','COVERAGE_LIMIT_REACHED','MOVEMENT_DETECTED','MOTION_ALERT','SENSOR_OFFLINE','SENSOR_RECOVERED','HEARTBEAT'];\nif(!e || !allowed.includes(e.event) || !/^[0-9a-f]{16}$/.test(e.boot_id) || !Number.isInteger(e.sequence) || e.sequence<1 || !Number.isInteger(e.timestamp_ms) || e.timestamp_ms<0 || typeof e.simulated!=='boolean' || typeof e.notify!=='boolean')return [];\nif(!Number.isInteger(e.client_id)||e.client_id<0||e.client_id>4294967295||e.sequence>4294967295||e.timestamp_ms>4294967295)return [];\nif(e.rssi_dbm!==null && (!Number.isFinite(e.rssi_dbm)||e.rssi_dbm< -100||e.rssi_dbm>=0))return [];\nif(e.distance_estimated_m!==null && (!Number.isFinite(e.distance_estimated_m)||e.distance_estimated_m<=0))return [];\nconst s=$getWorkflowStaticData('global'),now=Date.now();\ns.seen=s.seen||[];const id=e.boot_id+':'+e.sequence;if(s.seen.includes(id))return [];s.lastSeen=now;s.offline=false;\nif(e.event==='HEARTBEAT'){s.seen.push(id);s.seen=s.seen.slice(-512);return []}\nif(!e.notify||e.simulated||!['SIGNAL_WEAK','DEVICE_DISCONNECTED','MOTION_ALERT','SENSOR_OFFLINE'].includes(e.event))return [];\nreturn [{json:{id,message:'SENTINEL RF · '+e.event+'\\nCliente '+e.client_id+'\\nRSSI: '+(e.rssi_dbm??'no disponible')+' dBm\\nESTIMACIÓN POR RSSI: '+(e.distance_estimated_m??'sin calibración')+' m\\nTiempo relativo: '+e.timestamp_ms+' ms'}}];"
+      }
+    },
+    {
+      "id": "schedule",
+      "name": "Heartbeat watchdog",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "watch",
+      "name": "Check heartbeat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "jsCode": "const s=$getWorkflowStaticData('global');\nconst timeoutMs=60000; // Configurable; must exceed heartbeat + queue/network delay.\nif(!s.lastSeen || s.offline || Date.now()-s.lastSeen<=timeoutMs)return [];\nreturn [{json:{id:'offline:'+s.lastSeen,offline:true,message:'SENTINEL RF: no se recibe heartbeat desde hace más de '+timeoutMs/1000+' s. Puede ser pérdida de red, servicio o alimentación; causa no determinada.'}}];"
+      }
+    },
+    {
+      "id": "telegram",
+      "name": "SENTINEL Telegram",
+      "type": "n8n-nodes-sentinel.sentinelTelegram",
+      "typeVersion": 1,
+      "position": [
+        500,
+        80
+      ],
+      "parameters": {},
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "commit",
+      "name": "Commit delivery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        80
+      ],
+      "parameters": {
+        "jsCode": "const s=$getWorkflowStaticData('global');s.seen=s.seen||[];\nfor(const item of $input.all()){if(item.json.offline)s.offline=true;else s.seen.push(item.json.id)}s.seen=s.seen.slice(-512);return $input.all();"
+      }
+    }
+  ],
+  "connections": {
+    "Authenticated webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate and deduplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and deduplicate": {
+      "main": [
+        [
+          {
+            "node": "SENTINEL Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Heartbeat watchdog": {
+      "main": [
+        [
+          {
+            "node": "Check heartbeat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check heartbeat": {
+      "main": [
+        [
+          {
+            "node": "SENTINEL Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SENTINEL Telegram": {
+      "main": [
+        [
+          {
+            "node": "Commit delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

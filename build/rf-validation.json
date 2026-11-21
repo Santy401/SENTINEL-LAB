@@ -1,0 +1,87 @@
+{
+  "version": "0.3.1",
+  "environment": "sentinel_esp32s3_n16r8_rf",
+  "validation_date": "2026-11-20",
+  "ram_static_bytes": 72092,
+  "flash_program_bytes": 1049979,
+  "firmware_sha256": "918d9157f6308e84fb022faf0825ca37fb41ebc2edee28dcf70f22dce0f55799",
+  "firmware_sha256_previous": "09f2585213bc829963097766b69418d58972f9774572f1a9c6d401925ba0611b",
+  "firmware_sha256_flashed": "918d9157f6308e84fb022faf0825ca37fb41ebc2edee28dcf70f22dce0f55799",
+  "software_checks": {
+    "host_tests": [
+      "test_algorithm",
+      "test_motion_engine",
+      "test_rf",
+      "test_rf_monitor",
+      "test_event_json",
+      "test_motion_ingest",
+      "test_workflow"
+    ],
+    "host_tests_result": "passed",
+    "platformio_builds": [
+      "sentinel_esp32s3_n16r8",
+      "sentinel_esp32s3_n16r8_diag",
+      "sentinel_esp32s3_n16r8_v02",
+      "sentinel_esp32s3_n16r8_rf"
+    ],
+    "js_dom_checks": [
+      "src/v02/dashboard_html.h",
+      "src/rf/dashboard_html.h",
+      "src/rf/capture_html.h",
+      "src/rf/motion_setup_html.h"
+    ],
+    "js_dom_result": "passed",
+    "typescript_build": "passed",
+    "workflow_logic_tests": "passed without n8n runtime",
+    "toast_regression": "Firefox toast text absent from served HTML; refresh() errors remain explicit"
+  },
+  "physical_checks": {
+    "preflight": {
+      "port": "/dev/ttyACM0",
+      "usb_bridge": "1a86:55d3",
+      "chip": "ESP32-S3 QFN56 revision v0.2, 8MB embedded PSRAM",
+      "mac": "ac:27:6e:aa:c8:4c",
+      "flash": "16MB, manufacturer c2, device 2018, quad, 3.3V",
+      "binary_hash_before_flash": "918d9157f6308e84fb022faf0825ca37fb41ebc2edee28dcf70f22dce0f55799",
+      "result": "identity and integrity verified"
+    },
+    "flash": {
+      "command": "pio run -e sentinel_esp32s3_n16r8_rf -t upload --upload-port /dev/ttyACM0",
+      "log": "build/flash-v031.log",
+      "result": "SUCCESS in 25.37s",
+      "verification": "Hash of data verified for bootloader, partitions, boot_app0 and application",
+      "nvs_erased": false,
+      "reset": "hard reset via RTS"
+    },
+    "post_flash": {
+      "ap_ssid": "SENTINEL-LAB",
+      "ap_bssid": "AE:27:6E:AA:C8:4C",
+      "ap_channel": 1,
+      "ap_signal": 100,
+      "ap_samples": "3 identical passive samples over 6s",
+      "host_connection": "FAMILIACR unchanged",
+      "credentials_changed": false,
+      "n8n_deployed": false,
+      "telegram_deployed": false
+    },
+    "user_reported_2026_11_21": [
+      "iPhone recognized through libimobiledevice",
+      "Sensor Logger transmits real data",
+      "deviceId pairing works",
+      "acceptedSamples increases during recording",
+      "HTTP dashboard is operational"
+    ],
+    "pending_iphone_validation": [
+      "archive concrete responses from /api/motion/status, /api/state and /api/rf",
+      "HTTP /api/state, /api/rf, /api/lab and /api/events evidence",
+      "sampleAgeMs and signalLost evidence during and after recording",
+      "real X/Y/Z and accel.linear changes while moving the iPhone",
+      "real RSSI at measured distances and calibration/export"
+    ]
+  },
+  "hardware_validation": "v0.3.1 flashed, AP verified; iPhone recognition, real Sensor Logger transmission, pairing, increasing acceptedSamples and HTTP dashboard reported by user on 2026-11-21; concrete endpoint evidence, RSSI and distance calibration pending archive; see docs/rf-hardware-validation.md",
+  "toast_diagnosis": "Resumen no disponible is a native Firefox iOS toast from shakeMotionEnded -> SummarizerMiddleware -> showToast(.shakeToSummarizeNotAvailable) -> .Summarizer.ToastLabel; it is not a firmware message and does not indicate an HTTP failure. Mitigation: disable Agitar para resumir or keep Firefox in background.",
+  "ios_client": "Sensor Logger HTTP Push (native Core Motion), flashed on device but pending physical validation; see docs/rf-ios.md",
+  "validation_report": "docs/rf-hardware-validation.md",
+  "demo_guide": "docs/rf-demo.md"
+}
