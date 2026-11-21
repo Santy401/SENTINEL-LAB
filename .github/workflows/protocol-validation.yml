@@ -1,0 +1,44 @@
+name: Protocol validation
+
+on:
+  push:
+    paths:
+      - "packages/protocol/**"
+      - "docs/protocol-contract.md"
+      - "docs/decisions/ADR-0004-protocolo-v1.md"
+      - ".github/workflows/protocol-validation.yml"
+  pull_request:
+    paths:
+      - "packages/protocol/**"
+      - "docs/protocol-contract.md"
+      - "docs/decisions/ADR-0004-protocolo-v1.md"
+      - ".github/workflows/protocol-validation.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install protocol validator
+        run: python -m pip install -r packages/protocol/requirements.txt
+
+      - name: Validate valid examples
+        run: python3 packages/protocol/validate_protocol.py packages/protocol/examples/valid
+
+      - name: Ensure invalid examples are rejected
+        run: |
+          if python3 packages/protocol/validate_protocol.py packages/protocol/examples/invalid; then
+            echo "An invalid protocol example was accepted" >&2
+            exit 1
+          fi
+
+      - name: Run protocol tests
+        run: python3 -m unittest discover -s packages/protocol/tests -v
