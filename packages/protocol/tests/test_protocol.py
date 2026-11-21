@@ -132,6 +132,13 @@ class ProtocolContractTests(unittest.TestCase):
         self.assertEqual(valid_status, 1)
         self.assertIn("expected invalid", output.getvalue())
 
+    def test_expect_invalid_rejects_missing_path(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            status = main(["--expect-invalid", str(VALID_DIR / "missing.json")])
+        self.assertEqual(status, 2)
+        self.assertIn("does not exist", output.getvalue())
+
     def test_schema_ids_are_resolvable(self) -> None:
         schemas = {path.name: load_json(path) for path in SCHEMA_DIR.glob("*.schema.json")}
         ids = {schema["$id"] for schema in schemas.values()}

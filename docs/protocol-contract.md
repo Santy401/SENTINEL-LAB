@@ -171,8 +171,9 @@ Esto evita interpretaciones ambiguas entre HTTP, WebSocket y registro histórico
 | `UNAUTHORIZED` | Dispositivo o par no autorizado | No |
 | `INTERNAL_ERROR` | Fallo interno del receptor | Sí |
 
-El error incluye `relatedSource` y `relatedSequence` para identificar el mensaje
-rechazado sin incluir credenciales ni datos privados. Los mensajes del
+Cuando el error se asocia a un mensaje recibido, incluye `relatedSource` y
+`relatedSequence` para identificarlo sin exponer credenciales ni datos privados.
+Si no existe un mensaje relacionado, ambos campos se omiten. Los mensajes del
 validador no devuelven el payload completo.
 
 ## 8. Compatibilidad con firmware v0.3.1

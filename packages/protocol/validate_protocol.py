@@ -168,6 +168,9 @@ def main(argv: list[str] | None = None) -> int:
     failures = 0
     checked = 0
     for raw_path in args.paths:
+        if not raw_path.exists():
+            print(f"ERROR input path does not exist: {raw_path}")
+            return 2
         for path in _iter_json_files(raw_path):
             checked += 1
             errors = validate_file(path)
