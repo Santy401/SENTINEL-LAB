@@ -16,12 +16,16 @@
     "name": {
       "type": "string",
       "enum": [
-        "MOTION_STATE_CHANGED",
+        "DEVICE_CONNECTED",
+        "DEVICE_DISCONNECTED",
         "SIGNAL_WEAK",
         "SIGNAL_RECOVERED",
-        "WIFI_CLIENT_ASSOCIATED",
-        "WIFI_CLIENT_DISCONNECTED",
-        "SYSTEM_HEARTBEAT"
+        "COVERAGE_LIMIT_REACHED",
+        "MOVEMENT_DETECTED",
+        "MOTION_ALERT",
+        "SENSOR_OFFLINE",
+        "SENSOR_RECOVERED",
+        "HEARTBEAT"
       ]
     },
     "occurredAt": {
@@ -45,10 +49,11 @@
           "type": "string",
           "enum": ["STABLE", "MOVEMENT", "ALERT", "SENSOR_OFFLINE"]
         },
-        "rssiDbm": { "type": "integer", "minimum": -100, "maximum": 0 },
-        "mac": {
-          "type": "string",
-          "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+        "rssiDbm": { "type": "integer", "minimum": -100, "maximum": -1 },
+        "clientId": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
         },
         "deviceId": {
           "type": "string",

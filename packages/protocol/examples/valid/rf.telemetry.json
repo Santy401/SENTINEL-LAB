@@ -11,7 +11,8 @@
     "clientCount": 1,
     "clients": [
       {
-        "mac": "f8:0f:6b:12:34:56",
+        "clientId": 3,
+        "connected": true,
         "rssiDbm": -54,
         "filteredRssiDbm": -56,
         "lastSeen": "2026-11-21T16:10:01.900Z",

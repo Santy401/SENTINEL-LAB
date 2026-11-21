@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sentinel-lab.local/schemas/1.0.0/rf.telemetry.schema.json",
   "title": "RF telemetry payload",
-  "description": "Real RSSI observations from the ESP32 SoftAP monitor.",
+  "description": "Real RSSI observations from the ESP32 SoftAP monitor. Client identifiers are session-scoped and are not permanent device identities.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -37,14 +37,24 @@
     "client": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mac", "rssiDbm", "lastSeen"],
+      "required": ["clientId", "connected", "rssiDbm", "lastSeen"],
       "properties": {
-        "mac": {
-          "type": "string",
-          "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+        "clientId": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
         },
-        "rssiDbm": { "type": "integer", "minimum": -100, "maximum": 0 },
-        "filteredRssiDbm": { "type": "integer", "minimum": -100, "maximum": 0 },
+        "connected": { "type": "boolean" },
+        "rssiDbm": {
+          "type": ["integer", "null"],
+          "minimum": -100,
+          "maximum": -1
+        },
+        "filteredRssiDbm": {
+          "type": ["integer", "null"],
+          "minimum": -100,
+          "maximum": -1
+        },
         "lastSeen": {
           "type": "string",
           "format": "date-time",
@@ -58,7 +68,7 @@
       "additionalProperties": false,
       "required": ["valueM", "calibrated", "method"],
       "properties": {
-        "valueM": { "type": "number", "minimum": 0, "maximum": 1000 },
+        "valueM": { "type": "number", "minimum": 0, "maximum": 10000 },
         "calibrated": { "type": "boolean" },
         "method": { "const": "log-distance" }
       }

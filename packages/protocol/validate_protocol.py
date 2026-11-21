@@ -110,6 +110,15 @@ def validate_message(message: Any) -> list[str]:
             f"envelope: {len(encoded)} bytes exceeds limit of {MAX_ENVELOPE_BYTES}"
         )
 
+    if message.get("type") == "rf.telemetry" and isinstance(message.get("payload"), dict):
+        payload = message["payload"]
+        clients = payload.get("clients")
+        count = payload.get("clientCount")
+        if isinstance(clients, list) and isinstance(count, int) and count != len(clients):
+            errors.append(
+                f"payload.clientCount: declared {count} but found {len(clients)} clients"
+            )
+
     _check_finite_numbers(message, "", errors)
     _check_timestamps(message, "", errors)
     for error in VALIDATOR.iter_errors(message):

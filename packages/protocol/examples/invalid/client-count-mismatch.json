@@ -8,10 +8,11 @@
     "bootId": "rf-20261120-ac276eaa",
     "firmwareVersion": "0.3.1",
     "channel": 1,
-    "clientCount": 1,
+    "clientCount": 2,
     "clients": [
       {
-        "mac": "not-a-mac",
+        "clientId": 3,
+        "connected": true,
         "rssiDbm": -54,
         "lastSeen": "2026-11-21T16:10:01.900Z"
       }

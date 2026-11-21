@@ -71,6 +71,12 @@ class ProtocolContractTests(unittest.TestCase):
                 candidate = dict(message, sequence=value)
                 self.assertTrue(validate_message(candidate))
 
+    def test_rf_client_count_matches_clients(self) -> None:
+        message = load_json(VALID_DIR / "rf.telemetry.json")
+        message["payload"]["clientCount"] = 8
+        errors = validate_message(message)
+        self.assertTrue(any("clientCount" in error for error in errors))
+
     def test_payload_size_limit(self) -> None:
         message = load_json(VALID_DIR / "system.status.json")
         message["payload"]["diagnostics"] = "x" * MAX_ENVELOPE_BYTES
