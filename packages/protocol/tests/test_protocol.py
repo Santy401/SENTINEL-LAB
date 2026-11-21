@@ -71,6 +71,12 @@ class ProtocolContractTests(unittest.TestCase):
                 candidate = dict(message, sequence=value)
                 self.assertTrue(validate_message(candidate))
 
+    def test_hello_supported_version_matches_envelope(self) -> None:
+        message = load_json(VALID_DIR / "connection.hello.json")
+        message["payload"]["supportedVersion"] = "2.0.0"
+        errors = validate_message(message)
+        self.assertTrue(any("supportedVersion" in error for error in errors))
+
     def test_rf_client_count_matches_clients(self) -> None:
         message = load_json(VALID_DIR / "rf.telemetry.json")
         message["payload"]["clientCount"] = 8

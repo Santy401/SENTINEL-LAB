@@ -9,6 +9,7 @@
     "code": "UNSUPPORTED_PROTOCOL_VERSION",
     "message": "Producer declared protocol version 2.0.0",
     "retryable": false,
+    "relatedSource": "esp32-s3-rf",
     "relatedSequence": 1046
   }
 }

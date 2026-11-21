@@ -110,6 +110,13 @@ def validate_message(message: Any) -> list[str]:
             f"envelope: {len(encoded)} bytes exceeds limit of {MAX_ENVELOPE_BYTES}"
         )
 
+    if message.get("type") == "connection.hello" and isinstance(message.get("payload"), dict):
+        supported = message["payload"].get("supportedVersion")
+        if supported != SUPPORTED_VERSION:
+            errors.append(
+                f"payload.supportedVersion: unsupported version {supported!r}"
+            )
+
     if message.get("type") == "rf.telemetry" and isinstance(message.get("payload"), dict):
         payload = message["payload"]
         clients = payload.get("clients")
