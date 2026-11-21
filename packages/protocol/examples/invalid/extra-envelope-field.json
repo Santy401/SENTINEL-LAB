@@ -4,6 +4,7 @@
   "timestamp": "2026-11-21T16:10:03.000Z",
   "sequence": 1,
   "source": "esp32-s3-rf",
+  "sessionId": "rf-20261120-ac276eaa",
   "traceId": "not-part-of-the-contract",
   "payload": {
     "firmwareVersion": "0.3.1",

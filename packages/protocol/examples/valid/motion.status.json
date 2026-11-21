@@ -4,6 +4,7 @@
   "timestamp": "2026-11-21T16:10:01.000Z",
   "sequence": 1043,
   "source": "esp32-s3-rf",
+  "sessionId": "rf-20261120-ac276eaa",
   "payload": {
     "deviceId": "iphone-12-sensorlogger-01",
     "sourceType": "NativeClient",
