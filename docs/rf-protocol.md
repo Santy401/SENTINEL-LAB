@@ -111,3 +111,25 @@ no rendimiento medido ni garantía de transmisión.
 
 Movimiento: |a|=sqrt(x²+y²+z²), gravedad filtrada y dinámica aproximada a−g.
 No integra velocidad/desplazamiento. No presenta F=m·a porque no hay masa/modelo.
+
+## Superficie WebSocket v0.4.0
+
+El entorno `sentinel_esp32s3_n16r8_realtime` mantiene todas las rutas anteriores
+y añade `ws://<AP-IP>:81/realtime` con subprotocolo `sentinel.v1`. Los mensajes
+siguen el contrato de `docs/protocol-contract.md`; las diferencias relevantes
+frente a HTTP son:
+
+- `rf.telemetry` publica el mismo RSSI crudo y filtrado que `/api/rf`, pero su
+  `lastSeen` es UTC derivado del reloj sincronizado. Sin reloj no se emite.
+- `estimatedDistance` aparece solo cuando el experimento seleccionado tiene un
+  modelo calibrado por medición manual; no es una medición física directa.
+- `event` conserva los nombres de `EventEngine`, descarta eventos simulados y
+  usa el número de secuencia del anillo para no reenviar historia al conectar.
+- `motion.status` omite fuentes `Simulated` o `None`.
+- `system.status` incluye `freeHeapBytes` como valor instantáneo leído del SDK;
+  no sustituye una medición de pico.
+- El canal HTTP sigue siendo la interfaz de configuración y calibración; el
+  WebSocket es de solo telemetría más saludo, latido y despedida.
+
+Límites, autenticación y estado de validación: `docs/realtime-core.md` y
+`docs/validation/p2-software.md`.

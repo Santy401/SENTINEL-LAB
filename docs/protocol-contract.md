@@ -9,12 +9,13 @@ un archivo de evidencia.
 
 Estado real:
 
-- **Implemented**: esquemas, validador, ejemplos y pruebas automáticas.
-- **Software tested**: 17 pruebas de contrato, 9 ejemplos válidos y 16 casos
-  negativos ejecutados en GitHub Actions.
-- **Planned**: adaptadores en firmware, web, gateway e iOS.
-- **Hardware tested**: no. Este trabajo **no modifica** el firmware v0.3.1 ni
-  sus endpoints HTTP.
+- **Implemented**: esquemas, validador, ejemplos, pruebas automáticas y
+  adaptador en el firmware v0.4.0.
+- **Software tested**: 18 pruebas de contrato, 9 ejemplos válidos, 16 casos
+  negativos, 8 fixtures generados por el firmware y 14 programas host.
+- **Planned**: adaptadores en web, gateway e iOS.
+- **Hardware tested**: no. La imagen v0.3.1 y sus endpoints HTTP no cambian;
+  el transporte WebSocket existe solo en el entorno experimental `_realtime`.
 
 ## 2. Principios
 
@@ -53,7 +54,8 @@ La terna `source` + `sessionId` + `sequence` permite deduplicación y detección
 de pérdida de mensajes sin depender del transporte. `sessionId` cambia al
 reiniciar el productor o al restablecer una conexión; evita colisiones cuando
 `sequence` vuelve a cero. El validador comprueba la forma de la terna; el
-seguimiento de monotonía es estadoful y pertenece a los adaptadores de P2.
+seguimiento de monotonía es estadoful y está implementado en el adaptador P2 del
+firmware.
 
 ## 4. Tipos de mensaje
 
@@ -118,11 +120,11 @@ biblioteca nueva.
 
 El límite de 16 KiB se define sobre bytes de transporte canónicos, no sobre el
 objeto en memoria. Un gateway debe rechazar el mensaje mientras lee el frame o
-el cuerpo HTTP, antes de construir un objeto completo. En el ESP32, P2 deberá
-usar buffers acotados, colas limitadas y retroceso explícito; no debe reservar
-un buffer de 16 KiB por cliente ni por mensaje. El heap pico, la latencia y el
-comportamiento bajo carga real son criterios de salida de P2 y no están medidos
-en P1.
+el cuerpo HTTP, antes de construir un objeto completo. El adaptador P2 usa
+buffers fijos de 1016 bytes para el sobre, colas de dos tramas por par y
+retroceso explícito con contador de descartes; no reserva 16 KiB por cliente.
+El heap pico, la latencia y el comportamiento bajo carga real siguen sin medir;
+la comparación de tamaños estáticos está en `docs/validation/p2-software.md`.
 
 ### Comandos
 
@@ -179,10 +181,11 @@ validador no devuelven el payload completo.
 ## 8. Compatibilidad con firmware v0.3.1
 
 La API HTTP v0.3.1 permanece intacta. La siguiente tabla describe la
-correspondencia conceptual que usarán los adaptadores futuros; **no implica que
-el firmware ya emita estos mensajes**.
+correspondencia implementada por el adaptador WebSocket del entorno
+`sentinel_esp32s3_n16r8_realtime`. El entorno `_rf` sigue siendo la imagen de
+producción y no emite estos mensajes.
 
-| Superficie v0.3.1 | Mensaje v1 correspondiente | Garantía en P1 |
+| Superficie v0.3.1 | Mensaje v1 correspondiente | Garantía en P2 |
 |---|---|---|
 | `POST /api/motion/sensorlogger` | `motion.sample` | Mismo emparejamiento aceleración + gravedad y rechazo de simulación |
 | `GET /api/motion/status` | `motion.status` | Mismos conceptos; la fuente simulada se excluye de v1 |
@@ -197,22 +200,24 @@ el firmware ya emita estos mensajes**.
 reinicios. No es una dirección MAC ni una identidad permanente. El protocolo no
 admite `mac` en RF ni en eventos; el firmware v0.3.1 ya evita publicarla.
 
-Garantías concretas de esta etapa:
+Garantías concretas de P2:
 
 - No se renombró, movió ni eliminó ningún archivo de `src/` o `include/`.
-- No se cambió `platformio.ini`.
+- `platformio.ini` añade un quinto entorno; los cuatro originales conservan sus
+  filtros y todos compilan.
 - No se flasheó hardware.
-- Los cuatro entornos PlatformIO siguen compilando y el binario RF conserva su
-  SHA256 original.
-- La compatibilidad está documentada y es estructural; la compatibilidad en
-  ejecución se verificará en P2 con adaptadores y pruebas.
+- Los cambios en fuentes compartidas están dentro de `#ifdef SENTINEL_REALTIME`.
+- La compatibilidad está verificada en host y por compilación; la compatibilidad
+  en ejecución sobre la placa sigue pendiente.
+- Los detalles y tamaños se registran en `docs/validation/p2-software.md`.
 
 ## 9. Transporte
 
 - **HTTP**: un sobre por petición o respuesta; el código HTTP transporta el
   resultado, el payload `error` transporta el detalle.
-- **WebSocket**: un sobre por frame de texto; `hello` y `heartbeat` son
-  mensajes de control, no telemetría.
+- **WebSocket**: un sobre por frame de texto en `ws://<AP-IP>:81/realtime`;
+  `hello` y `heartbeat` son mensajes de control, no telemetría. El endpoint está
+  acotado a la red local y se documenta en `docs/realtime-core.md`.
 - **Sin transporte**: el mismo JSON es válido como evidencia archivada.
 
 El contrato no asume TLS, autenticación ni topología. Esas decisiones pertenecen

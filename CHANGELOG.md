@@ -13,6 +13,12 @@ SemVer cuando exista una release oficial.
 - Auditoría P0 e inventario del firmware funcional.
 - Contrato de protocolo v1.0.0 con esquemas estrictos y validador.
 - Ejemplos válidos, casos negativos y workflow de validación de protocolo.
+- Núcleo SENTINEL Core v0.4.0: WebSocket local con Protocol v1, telemetría RF,
+  estado de movimiento, eventos, latidos y despedida ordenada.
+- Entorno `sentinel_esp32s3_n16r8_realtime`, ADR-0005, guía `docs/realtime-core.md`
+  e informe `docs/validation/p2-software.md`.
+- Pruebas host del codec, reloj, colas, autenticación, handshake, adaptador,
+  sesiones y ciclo de vida del servidor WebSocket.
 
 ### Changed
 
@@ -20,6 +26,8 @@ SemVer cuando exista una release oficial.
 - El sobre exige `sessionId`; la deduplicación usa `source`, `sessionId` y
   `sequence`.
 - RF y eventos usan `clientId` por sesión sin publicar MAC ni inventar nombres.
+- El contrato documenta el adaptador de firmware como implementado y probado en
+  software; la web, el gateway y la app iOS siguen pendientes.
 
 ### Fixed
 
@@ -34,11 +42,27 @@ SemVer cuando exista una release oficial.
   `rfc3339-validator`.
 - Los errores no devuelven el payload completo y el CI exige que cada caso
   negativo sea rechazado.
+- El servidor libera la ranura de un par que cierra localmente en lugar de
+  retenerla hasta el timeout.
+- La despedida del cliente se confirma antes de cerrar el socket y las tramas
+  consecutivas en una sola lectura se procesan por separado.
 
 ### Security
 
 - Verificación automática de secretos y rutas prohibidas antes de publicar.
 - El contrato exige `simulated: false` en todos los mensajes de medición.
+- Bearer token opcional para el rol `gateway`; sin token no se puede sincronizar
+  el reloj por WebSocket. La plantilla pública no contiene credenciales.
+- El firmware no inventa timestamps UTC: no emite sobres v1 hasta obtener una
+  fecha válida de NTP local o de un gateway autenticado.
+
+### Validation
+
+- 14 programas host, 18 pruebas de contrato, 9 ejemplos válidos, 16 casos
+  negativos y 8 fixtures del firmware validados.
+- Los cinco entornos PlatformIO compilan; RAM y flash estáticas se registran en
+  `docs/validation/p2-software.md`.
+- Sin pruebas de placa, heap en ejecución ni radio.
 
 ## v0.3.1
 

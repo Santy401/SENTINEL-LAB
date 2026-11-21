@@ -46,7 +46,9 @@ SENTINEL-LAB is under active development.
 
 The current firmware supports HTTP-based monitoring, Wi-Fi RSSI measurements, motion ingestion, and experimental calibration.
 
-Real-time WebSocket telemetry, a redesigned web interface, gateway services, and native applications are planned for future releases.
+SENTINEL Core v0.4.0 adds bounded WebSocket telemetry in a separate `sentinel_esp32s3_n16r8_realtime` build. The stable v0.3.1 HTTP firmware is unchanged. The WebSocket transport is software-tested only; it has not been flashed or validated on hardware. A redesigned web interface, gateway services, and native applications remain planned.
+
+See [SENTINEL Core v0.4.0](docs/realtime-core.md) and the [software validation report](docs/validation/p2-software.md).
 
 **Status:** Experimental — not production-ready.
 
@@ -64,7 +66,8 @@ Real-time WebSocket telemetry, a redesigned web interface, gateway services, and
 - [x] Embedded firmware and sensor monitoring
 - [x] HTTP API and initial dashboard
 - [x] Motion ingestion and RF experiments
-- [x] Versioned protocol contract (runtime adapters pending)
+- [x] Versioned protocol contract
+- [x] Firmware WebSocket telemetry (v0.4.0, software-tested)
 - [ ] Next-generation web dashboard
 - [ ] Gateway and automation integration
 - [ ] Native application development
