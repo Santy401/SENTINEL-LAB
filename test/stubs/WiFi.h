@@ -17,6 +17,8 @@ class WiFiClient {
     std::vector<uint8_t> rx;
     std::vector<uint8_t> tx;
     bool active = true;
+    // TCP FIN received without a WebSocket Close frame (half-closed socket).
+    bool remoteFin = false;
   };
 
   WiFiClient() = default;
@@ -66,6 +68,16 @@ class WiFiClient {
     size_t length = 0;
     while (data[length]) ++length;
     return write(data, length);
+  }
+
+  // Simulates the peer sending FIN: pending bytes remain readable, but the
+  // socket reports EOF once they are consumed. connected() keeps returning
+  // true, matching the Arduino-ESP32 behaviour this stub models.
+  void finish() {
+    if (state_) state_->remoteFin = true;
+  }
+  bool remoteClosed() const {
+    return !state_ || (state_->remoteFin && state_->rx.empty());
   }
 
   void stop() {

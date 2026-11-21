@@ -29,6 +29,10 @@ class RealtimeCore {
   uint32_t freeHeapBytes() const { return freeHeapBytes_; }
   uint32_t minFreeHeapBytes() const { return minFreeHeapBytes_; }
   uint32_t heapSamples() const { return heapSamples_; }
+  uint32_t largestFreeBlockBytes() const { return largestFreeBlockBytes_; }
+  uint32_t minLoopStackFreeBytes() const { return minLoopStackFreeBytes_; }
+  const UtcClock& clock() const { return clock_; }
+  const RealtimeServer& server() const { return server_; }
 
  private:
   static constexpr uint32_t kRfIntervalMs = 1000;
@@ -60,6 +64,11 @@ class RealtimeCore {
   uint32_t freeHeapBytes_ = 0;
   uint32_t minFreeHeapBytes_ = 0;
   uint32_t heapSamples_ = 0;
+  uint32_t largestFreeBlockBytes_ = 0;
+  uint32_t minLoopStackFreeBytes_ = 0;
+  // Fixed buffers for periodic envelopes; kept off the loop task stack.
+  RfClientView rfClients_[8]{};
+  char message_[kProtocolMessageBytes]{};
   bool eventBridgeStarted_ = false;
   uint32_t droppedTelemetry_ = 0;
   uint32_t skippedSimulatedEvents_ = 0;

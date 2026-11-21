@@ -81,6 +81,7 @@ void SessionState::begin(uint8_t slot, const char* bootId, bool system) {
   lastInboundSequence_ = 0;
   hasInboundSequence_ = false;
   inboundSource_[0] = '\0';
+  inboundSessionId_[0] = '\0';
   helloReceived_ = false;
   privileged_ = false;
 }
@@ -88,6 +89,11 @@ void SessionState::begin(uint8_t slot, const char* bootId, bool system) {
 void SessionState::bindInboundSource(const char* source) {
   if (hasInboundSource()) return;
   snprintf(inboundSource_, sizeof(inboundSource_), "%s", source);
+}
+
+void SessionState::bindInboundSessionId(const char* sessionId) {
+  if (hasInboundSessionId() || !sessionId || !*sessionId) return;
+  snprintf(inboundSessionId_, sizeof(inboundSessionId_), "%s", sessionId);
 }
 
 uint64_t SessionState::nextSequence() {
@@ -150,10 +156,13 @@ InboundMessage InboundValidator::validate(const char* json, size_t length,
     if (!validIdentifier(sessionId, true)) {
       return reject(kInvalidEnvelopeCode, "invalid envelope");
     }
-    if (session.sessionId()[0] != '\0' &&
-        strcmp(sessionId, session.sessionId()) != 0) {
+    if (session.hasInboundSessionId() &&
+        strcmp(sessionId, session.inboundSessionId()) != 0) {
       return reject(kUnauthorizedCode, "invalid envelope");
     }
+  } else if (session.hasInboundSessionId()) {
+    // Once a client has identified its session it cannot drop the field.
+    return reject(kUnauthorizedCode, "invalid envelope");
   }
   // The peer's source is assigned by its first accepted frame and cannot be
   // changed later in the same session.
@@ -193,9 +202,16 @@ InboundMessage InboundValidator::validate(const char* json, size_t length,
         return reject(kUnauthorizedCode, "privileged role requires a token");
       }
       result.syncClock = true;
+      result.privileged = true;
+    } else if (strcmp(role, "ios") == 0) {
+      // The native app is a time authority only when it presents the bearer
+      // token; without it, it is a read-only telemetry client.
+      if (authenticated) {
+        result.syncClock = true;
+        result.privileged = true;
+      }
     } else if (strcmp(role, "web") != 0 &&
-               strcmp(role, "sensor-client") != 0 &&
-               strcmp(role, "ios") != 0) {
+               strcmp(role, "sensor-client") != 0) {
       return reject(kInvalidEnvelopeCode, "invalid envelope");
     }
     snprintf(result.role, sizeof(result.role), "%s", role);
@@ -203,7 +219,16 @@ InboundMessage InboundValidator::validate(const char* json, size_t length,
              supported);
   }
 
+  if (strcmp(type, "connection.heartbeat") == 0 && authenticated &&
+      session.privileged()) {
+    // Periodic re-sync from the same authenticated time authority bounds the
+    // drift of the ESP32 crystal during long soak runs.
+    result.syncClock = true;
+    result.privileged = true;
+  }
+
   session.bindInboundSource(source);
+  session.bindInboundSessionId(sessionId);
   snprintf(result.source, sizeof(result.source), "%s",
            session.inboundSource());
   return result;

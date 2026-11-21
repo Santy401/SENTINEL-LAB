@@ -49,6 +49,8 @@ void RealtimeCore::begin(uint16_t port, const char* bootId,
   const uint32_t heap = firmwareFreeHeapBytes();
   freeHeapBytes_ = heap;
   minFreeHeapBytes_ = heap;
+  largestFreeBlockBytes_ = firmwareLargestFreeBlockBytes();
+  minLoopStackFreeBytes_ = firmwareLoopStackFreeBytes();
   heapSamples_ = 1;
 
 #if defined(SENTINEL_RF_NTP_SERVER)
@@ -83,12 +85,11 @@ void RealtimeCore::loop(uint32_t nowMs) {
   }
   if (uint32_t(nowMs - lastHeartbeat_) >= kHeartbeatIntervalMs) {
     lastHeartbeat_ = nowMs;
-    char heartbeat[kProtocolMessageBytes]{};
     if (adapter_.buildHeartbeat(systemSession_.source(),
                                 systemSession_.sessionId(),
                                 systemSession_.nextSequence(), nowMs, bootId_,
-                                heartbeat, sizeof(heartbeat))) {
-      server_.broadcast(heartbeat, strlen(heartbeat));
+                                message_, sizeof(message_))) {
+      server_.broadcast(message_, strlen(message_));
     } else {
       ++droppedTelemetry_;
     }
@@ -114,6 +115,10 @@ void RealtimeCore::sampleHeap(uint32_t nowMs) {
   const uint32_t heap = firmwareFreeHeapBytes();
   freeHeapBytes_ = heap;
   if (heap < minFreeHeapBytes_) minFreeHeapBytes_ = heap;
+  largestFreeBlockBytes_ = firmwareLargestFreeBlockBytes();
+  // The high-water mark only decreases; keep the minimum for clarity.
+  const uint32_t stackFree = firmwareLoopStackFreeBytes();
+  if (stackFree < minLoopStackFreeBytes_) minLoopStackFreeBytes_ = stackFree;
   ++heapSamples_;
 }
 
@@ -124,7 +129,7 @@ void RealtimeCore::tryNtpSync(uint32_t nowMs) {
   lastNtpCheck_ = nowMs;
   const time_t now = time(nullptr);
   if (now >= 1700000000) {
-    clock_.sync(static_cast<int64_t>(now) * 1000, nowMs);
+    clock_.sync(static_cast<int64_t>(now) * 1000, nowMs, ClockSource::Ntp);
   }
 #else
   (void)nowMs;
@@ -132,18 +137,17 @@ void RealtimeCore::tryNtpSync(uint32_t nowMs) {
 }
 
 void RealtimeCore::publishRf(uint32_t nowMs) {
-  RfClientView clients[8]{};
   uint8_t channel = 0;
   bool available = false;
-  const size_t count = snapshotRfClients(clients, 8, channel, available);
+  const size_t count = snapshotRfClients(rfClients_, 8, channel, available);
   if (!available) return;
 
-  char message[kProtocolMessageBytes]{};
+  char* message = message_;
   if (!adapter_.buildRfTelemetry(systemSession_.source(),
                                  systemSession_.sessionId(),
                                  systemSession_.nextSequence(), nowMs, bootId_,
-                                 channel, clients, count, message,
-                                 sizeof(message))) {
+                                 channel, rfClients_, count, message,
+                                 sizeof(message_))) {
     ++droppedTelemetry_;
     return;
   }
@@ -166,11 +170,11 @@ void RealtimeCore::publishSystem(uint32_t nowMs) {
   // Reuse the latest health sample; both consumers report the same reading.
   status.freeHeapBytes = freeHeapBytes_;
 
-  char message[kProtocolMessageBytes]{};
+  char* message = message_;
   if (!adapter_.buildSystemStatus(systemSession_.source(),
                                   systemSession_.sessionId(),
                                   systemSession_.nextSequence(), nowMs,
-                                  bootId_, status, message, sizeof(message))) {
+                                  bootId_, status, message, sizeof(message_))) {
     ++droppedTelemetry_;
     return;
   }
@@ -181,11 +185,11 @@ void RealtimeCore::publishMotion(uint32_t nowMs) {
   MotionStatusView status;
   if (!snapshotMotionStatus(nowMs, status)) return;
 
-  char message[kProtocolMessageBytes]{};
+  char* message = message_;
   if (!adapter_.buildMotionStatus(systemSession_.source(),
                                   systemSession_.sessionId(),
                                   systemSession_.nextSequence(), nowMs, status,
-                                  message, sizeof(message))) {
+                                  message, sizeof(message_))) {
     ++droppedTelemetry_;
     return;
   }
@@ -214,12 +218,12 @@ void RealtimeCore::publishEvents(uint32_t nowMs) {
     details.clientId = event.clientId;
     details.rssiDbm = event.rssi;
 
-    char message[kProtocolMessageBytes]{};
+    char* message = message_;
     if (!adapter_.buildEvent(systemSession_.source(),
                              systemSession_.sessionId(),
                              systemSession_.nextSequence(), nowMs, eventId,
                              rf::eventName(event.type), event.timeMs, details,
-                             message, sizeof(message))) {
+                             message, sizeof(message_))) {
       ++droppedTelemetry_;
       continue;
     }
@@ -232,20 +236,35 @@ bool snapshotRealtimeHealth(RealtimeHealthView& output) {
   if (!core) return false;
 
   output = RealtimeHealthView{};
-  output.fw = "0.3.1";
-  output.realtimeVersion = "0.4.0";
+  output.fw = kHttpApiVersion;
+  output.httpApiVersion = kHttpApiVersion;
+  output.firmwareVersion = kFirmwareVersion;
+  output.realtimeVersion = kFirmwareVersion;
   // Same source as /api/rf, so soak logs can correlate the two endpoints.
   output.bootId = firmwareBootId();
-  output.uptimeMs = millis();
-  output.clockSynced = core->clockSynced();
+  output.resetReason = firmwareResetReason();
+  const uint32_t now = millis();
+  output.uptimeMs = now;
+  const UtcClock& clock = core->clock();
+  output.clockSynced = clock.synced();
+  output.clockSource = clockSourceName(clock.source());
+  if (clock.synced()) {
+    output.hasClockSyncAge = true;
+    output.clockSyncAgeMs = now - clock.syncedAtMs();
+  }
   output.clientCount = static_cast<uint32_t>(core->clientCount());
   output.freeHeapBytes = core->freeHeapBytes();
   output.minFreeHeapBytes = core->minFreeHeapBytes();
+  output.largestFreeBlockBytes = core->largestFreeBlockBytes();
+  output.minLoopStackFreeBytes = core->minLoopStackFreeBytes();
   output.heapSamples = core->heapSamples();
   output.droppedFrames = core->droppedFrames();
   output.rejectedMessages = core->rejectedMessages();
   output.droppedTelemetry = core->droppedTelemetry();
   output.skippedSimulatedEvents = core->skippedSimulatedEvents();
+  output.handshakeTimeouts = core->server().handshakeTimeouts();
+  output.idleTimeouts = core->server().idleTimeouts();
+  output.remoteCloses = core->server().remoteCloses();
   return true;
 }
 

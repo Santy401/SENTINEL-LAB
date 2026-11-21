@@ -1,4 +1,5 @@
 #include "realtime/realtime_health.h"
+#include "realtime/realtime_health_json.h"
 
 #include "realtime/auth.h"
 #include "realtime/realtime_core.h"
@@ -21,19 +22,7 @@ namespace {
 // Mirrors the serialization performed by /api/realtime/status in web_rf.cpp.
 std::string serializeView(const RealtimeHealthView& health) {
   JsonDocument doc;
-  doc["fw"] = health.fw;
-  doc["realtimeVersion"] = health.realtimeVersion;
-  doc["bootId"] = health.bootId;
-  doc["uptimeMs"] = health.uptimeMs;
-  doc["clockSynced"] = health.clockSynced;
-  doc["clientCount"] = health.clientCount;
-  doc["freeHeapBytes"] = health.freeHeapBytes;
-  doc["minFreeHeapBytes"] = health.minFreeHeapBytes;
-  doc["heapSamples"] = health.heapSamples;
-  doc["droppedFrames"] = health.droppedFrames;
-  doc["rejectedMessages"] = health.rejectedMessages;
-  doc["droppedTelemetry"] = health.droppedTelemetry;
-  doc["skippedSimulatedEvents"] = health.skippedSimulatedEvents;
+  writeRealtimeHealth(health, doc);
   std::string body;
   serializeJson(doc, body);
   return body;
@@ -53,7 +42,15 @@ int main() {
 
   assert(snapshotRealtimeHealth(view));
   assert(std::strcmp(view.fw, "0.3.1") == 0);
-  assert(std::strcmp(view.realtimeVersion, "0.4.0") == 0);
+  assert(std::strcmp(view.realtimeVersion, "0.4.1") == 0);
+  assert(std::strcmp(view.firmwareVersion, "0.4.1") == 0);
+  assert(std::strcmp(view.httpApiVersion, "0.3.1") == 0);
+  assert(std::strcmp(view.resetReason, "POWERON") == 0);
+  assert(std::strcmp(view.clockSource, "none") == 0);
+  assert(!view.hasClockSyncAge);
+  assert(view.largestFreeBlockBytes == 50000);
+  assert(view.minLoopStackFreeBytes == 4096);
+  assert(view.handshakeTimeouts == 0);
   assert(std::strcmp(view.bootId, "rf-boot-id") == 0);
   assert(view.uptimeMs == 0);
   assert(view.clockSynced == false);
@@ -105,11 +102,15 @@ int main() {
 
   const std::string body = serializeView(view);
   const std::string expected =
-      R"({"fw":"0.3.1","realtimeVersion":"0.4.0","bootId":"rf-boot-id",)"
-      R"("uptimeMs":45000,"clockSynced":false,"clientCount":2,)"
-      R"("freeHeapBytes":50000,"minFreeHeapBytes":50000,"heapSamples":4,)"
-      R"("droppedFrames":3,"rejectedMessages":4,"droppedTelemetry":0,)"
-      R"("skippedSimulatedEvents":0})";
+      R"({"fw":"0.3.1","httpApiVersion":"0.3.1","firmwareVersion":"0.4.1",)"
+      R"("realtimeVersion":"0.4.1","bootId":"rf-boot-id",)"
+      R"("resetReason":"POWERON","uptimeMs":45000,"clockSynced":false,)"
+      R"("clockSource":"none","clockSyncAgeMs":null,"clientCount":2,)"
+      R"("freeHeapBytes":50000,"minFreeHeapBytes":50000,)"
+      R"("largestFreeBlockBytes":25000,"minLoopStackFreeBytes":4096,)"
+      R"("heapSamples":4,"droppedFrames":3,"rejectedMessages":4,)"
+      R"("droppedTelemetry":0,"skippedSimulatedEvents":0,)"
+      R"("handshakeTimeouts":0,"idleTimeouts":0,"remoteCloses":0})";
   if (body != expected) {
     std::printf("health JSON mismatch:\n  actual:   %s\n  expected: %s\n",
                 body.c_str(), expected.c_str());

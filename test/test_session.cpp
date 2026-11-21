@@ -154,20 +154,70 @@ int main() {
   assert(result.valid);
   assert(std::strcmp(result.source, "web-dashboard") == 0);
 
-  // A peer without an assigned session id supplies its own; a stale id from a
-  // previous connection is rejected against the reconnected session.
+  // Inbound sessionId is owned by the client: the first well-formed value is
+  // bound, a different value later in the same connection is unauthorized,
+  // and dropping the field after binding is rejected too.
   SessionState fresh;
   envelope = hello("web", kProtocolVersion, 1, "client-run-001", "client-ui");
   result = validator.validate(envelope.data(), envelope.size(), 1000, false,
                               fresh);
   assert(result.valid);
   assert(std::strcmp(fresh.inboundSource(), "client-ui") == 0);
+  assert(std::strcmp(fresh.inboundSessionId(), "client-run-001") == 0);
 
-  envelope = hello("web", kProtocolVersion, 1, assigned);
+  envelope = hello("web", kProtocolVersion, 2, "client-run-002", "client-ui");
   result = validator.validate(envelope.data(), envelope.size(), 1000, false,
-                              reconnected);
+                              fresh);
   assert(!result.valid);
   assert(result.errorCode == kUnauthorizedCode);
+
+  envelope = hello("web", kProtocolVersion, 3, nullptr, "client-ui");
+  result = validator.validate(envelope.data(), envelope.size(), 1000, false,
+                              fresh);
+  assert(!result.valid);
+  assert(result.errorCode == kUnauthorizedCode);
+
+  // A reconnect starts a new binding: the client's new sessionId is accepted.
+  envelope = hello("web", kProtocolVersion, 1, "client-run-003", "client-ui");
+  result = validator.validate(envelope.data(), envelope.size(), 1000, false,
+                              reconnected);
+  assert(result.valid);
+  assert(std::strcmp(reconnected.inboundSessionId(), "client-run-003") == 0);
+
+  // role "ios": read-only without a token, time authority with one.
+  SessionState iosAnon;
+  iosAnon.begin(1, "boot1234");
+  envelope = hello("ios", kProtocolVersion, 1, "ios-run-1", "ios-app");
+  result = validator.validate(envelope.data(), envelope.size(), 1000, false,
+                              iosAnon);
+  assert(result.valid);
+  assert(!result.syncClock);
+  assert(!result.privileged);
+
+  SessionState iosAuth;
+  iosAuth.begin(2, "boot1234");
+  result = validator.validate(envelope.data(), envelope.size(), 1000, true,
+                              iosAuth);
+  assert(result.valid);
+  assert(result.syncClock);
+  assert(result.privileged);
+  iosAuth.markPrivileged();
+
+  // Authenticated heartbeat from the privileged session re-syncs the clock;
+  // the same heartbeat from an unprivileged session never does.
+  const char heartbeatTemplate[] =
+      "{\"protocolVersion\":\"1.0.0\",\"type\":\"connection.heartbeat\","
+      "\"timestamp\":\"2026-11-21T16:10:07.100Z\",\"sequence\":2,"
+      "\"source\":\"ios-app\",\"sessionId\":\"ios-run-1\",\"payload\":{"
+      "\"uptimeMs\":5000}}";
+  result = validator.validate(heartbeatTemplate, sizeof(heartbeatTemplate) - 1,
+                              1000, true, iosAuth);
+  assert(result.valid);
+  assert(result.syncClock);
+  result = validator.validate(heartbeatTemplate, sizeof(heartbeatTemplate) - 1,
+                              1000, false, iosAnon);
+  assert(result.valid);
+  assert(!result.syncClock);
 
   reconnected.begin(3, "boot1234");
   assert(!reconnected.hasInboundSource());

@@ -58,9 +58,14 @@ int main() {
 
   JsonDocument doc;
   assert(!deserializeJson(doc, server.lastBody));
-  assert(doc.size() == 13);
+  assert(doc.size() == 23);
   assert(std::string(doc["fw"]) == "0.3.1");
-  assert(std::string(doc["realtimeVersion"]) == "0.4.0");
+  assert(std::string(doc["realtimeVersion"]) == "0.4.1");
+  assert(std::string(doc["firmwareVersion"]) == "0.4.1");
+  assert(std::string(doc["httpApiVersion"]) == "0.3.1");
+  assert(std::string(doc["resetReason"]) == "POWERON");
+  assert(std::string(doc["clockSource"]) == "none");
+  assert(doc["clockSyncAgeMs"].isNull());
   assert(std::string(doc["bootId"]) == "rf-boot-id");
   assert(doc["uptimeMs"] == 15000);
   assert(doc["clockSynced"] == false);
