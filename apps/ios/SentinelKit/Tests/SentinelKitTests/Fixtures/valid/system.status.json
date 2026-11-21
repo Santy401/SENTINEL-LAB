@@ -1,0 +1,18 @@
+{
+  "protocolVersion": "1.0.0",
+  "type": "system.status",
+  "timestamp": "2026-11-21T16:10:03.000Z",
+  "sequence": 1045,
+  "source": "esp32-s3-rf",
+  "sessionId": "rf-20261120-ac276eaa",
+  "payload": {
+    "firmwareVersion": "0.3.1",
+    "bootId": "rf-20261120-ac276eaa",
+    "uptimeMs": 912345,
+    "operationalState": "MONITORING",
+    "transports": ["http"],
+    "capabilities": ["motion.ingest", "rf.monitor", "laboratory"],
+    "freeHeapBytes": 255588,
+    "simulated": false
+  }
+}

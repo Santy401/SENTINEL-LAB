@@ -1,0 +1,61 @@
+name: iOS app
+
+on:
+  pull_request:
+    paths:
+      - "apps/ios/**"
+      - "packages/protocol/examples/**"
+      - ".github/workflows/ios.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/ios/**"
+      - "packages/protocol/examples/**"
+      - ".github/workflows/ios.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sentinelkit-linux:
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check fixtures match the shared contract examples
+        run: |
+          for kind in valid invalid; do
+            diff -r "packages/protocol/examples/$kind" "apps/ios/SentinelKit/Tests/SentinelKitTests/Fixtures/$kind"
+          done
+      - name: swift test
+        working-directory: apps/ios/SentinelKit
+        run: swift test
+
+  ios-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: apps/ios
+        run: xcodegen generate
+      - name: SentinelKit tests (macOS)
+        working-directory: apps/ios/SentinelKit
+        run: swift test
+      - name: Build app for iOS Simulator (unsigned)
+        working-directory: apps/ios
+        run: |
+          xcodebuild build \
+            -project SentinelLab.xcodeproj \
+            -scheme SentinelLab \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Build app for iOS device (unsigned, not installable)
+        working-directory: apps/ios
+        run: |
+          xcodebuild build \
+            -project SentinelLab.xcodeproj \
+            -scheme SentinelLab \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO
