@@ -46,7 +46,8 @@ def summarize(observation: dict[str, Any]) -> str:
     return f"sin respuesta ({error or 'error desconocido'})"
 
 
-def check_health(observation: dict[str, Any], expected_fw: str) -> tuple[bool, str]:
+def check_health(observation: dict[str, Any], expected_fw: str,
+                 expected_realtime: str) -> tuple[bool, str]:
     body = observation.get("bodyJson")
     if not isinstance(body, dict):
         return False, "cuerpo no JSON"
@@ -55,14 +56,19 @@ def check_health(observation: dict[str, Any], expected_fw: str) -> tuple[bool, s
         return False, "campos ausentes: " + ", ".join(missing)
     if body.get("fw") not in (None, expected_fw):
         return False, f"fw={body.get('fw')}"
-    return True, "13 campos"
+    if body.get("realtimeVersion") != expected_realtime:
+        return False, f"realtimeVersion={body.get('realtimeVersion')!r}"
+    return True, "13 campos, realtimeVersion=" + expected_realtime
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="192.168.4.1")
     parser.add_argument("--timeout", type=float, default=4.0)
-    parser.add_argument("--expected-fw", default="0.3.1")
+    parser.add_argument("--expected-fw", default="0.3.1",
+                        help="HTTP API version; v0.4.0 deliberately keeps 0.3.1")
+    parser.add_argument("--expected-realtime", default="0.4.0",
+                        help="expected realtimeVersion in /api/realtime/status")
     parser.add_argument("--save-json", type=Path, help="optional host-side observation file")
     return parser.parse_args(argv)
 
@@ -96,7 +102,8 @@ def main(argv: list[str] | None = None) -> int:
             if observation.get("status") == 404:
                 note = "ausente en _rf (esperado)"
             elif observation.get("status") == 200:
-                valid, detail = check_health(observation, args.expected_fw)
+                valid, detail = check_health(observation, args.expected_fw,
+                                             args.expected_realtime)
                 note = detail if valid else "FAIL " + detail
                 if not valid:
                     failures += 1

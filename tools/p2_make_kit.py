@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-DEFAULT_BACKUP = Path("/home/santy401/.sentinel-backups/v0.3.1-rf-20261121T194718Z")
+DEFAULT_BACKUP = (Path.home() / ".sentinel-backups" / "v0.3.1-rf-20261121T194718Z")
 DEFAULT_BOOT_APP0 = (
     Path.home() / ".platformio" / "packages" / "framework-arduinoespressif32"
     / "tools" / "partitions" / "boot_app0.bin"
@@ -29,17 +29,24 @@ BINARIES = ("bootloader.bin", "partitions.bin", "boot_app0.bin", "firmware.bin")
 TOOLS = (
     "hw_common.py", "hw_capture.py", "hw_report.py", "p2_preflight.py",
     "p2_serial_check.py", "p2_http_check.py", "p2_ws_probe.py",
-    "p2_flash_authorized.sh",
+    "p2_esptool.sh", "p2_layout_check.py", "p2_flash_authorized.sh",
+    "p2_restore_full_authorized.sh",
 )
 DOCS = (
     "hardware/p2-kit.md",
     "hardware/recovery.md",
     "hardware/v031-backup-inventory.md",
+    "hardware/p2-flash-layout.md",
+    "hardware/p2-full-recovery.md",
     "validation/p2-hardware.md",
     "validation/p2-software.md",
     "validation/p2-physical-matrix.md",
     "validation/p2-build-record.md",
     "realtime-core.md",
+)
+PROTOCOL_FILES = (
+    "validate_protocol.py", "requirements.txt", "README.md",
+    "tests/test_protocol.py",
 )
 EVIDENCE_DIRS = ("serial", "http", "ws", "heap", "results", "versions", "checksums", "incidents", "final")
 FORBIDDEN_NAMES = {"secrets.h", ".env"}
@@ -189,6 +196,12 @@ def main(argv: list[str] | None = None) -> int:
         destination_name = "README.md" if relative == "hardware/p2-kit.md" else relative
         copy_file(source, destination / "docs" / destination_name)
 
+    protocol_source = REPO / "packages" / "protocol"
+    for name in PROTOCOL_FILES:
+        copy_file(protocol_source / name, destination / "packages" / "protocol" / name)
+    for schema in sorted((protocol_source / "schemas").glob("*.schema.json")):
+        copy_file(schema, destination / "packages" / "protocol" / "schemas" / schema.name)
+
     copy_file(build_log, destination / "build" / f"{BUILD_ENV}.log")
 
     evidence_root = destination / "evidence"
@@ -226,9 +239,10 @@ def main(argv: list[str] | None = None) -> int:
         f"- Generado UTC: `{build_record['generatedAt']}`",
         f"- Commit del repositorio: `{commit}`",
         f"- Entorno P2: `{BUILD_ENV}`",
-        f"- Respaldo v0.3.1: `{backup}`",
+        "- Conjunto v0.3.1 incluido en `firmware/v0.3.1/` (cuatro binarios verificados).",
+        "- Imagen completa original de 16 MiB: **no incluida**, permanece en el equipo de hardware.",
         "- Credenciales incluidas: **ninguna**.",
-        "- Estado: **IMPLEMENTED / SOFTWARE TESTED / HARDWARE VALIDATION PENDING**.",
+        "- Estado: **P2 READY FOR AUTHORIZED HARDWARE FLASH — NOT YET FLASHED**.",
         "",
         "## Artefactos v0.3.1",
         "",
@@ -245,9 +259,16 @@ def main(argv: list[str] | None = None) -> int:
         "```bash",
         "sha256sum -c SHA256SUMS",
         "python3 tools/p2_preflight.py --root .",
+        "python3 tools/p2_layout_check.py --kit . --save-json evidence/checksums/layout.json",
         "```",
         "",
+        "El paquete `packages/protocol/` incluye el validador y los esquemas para que",
+        "`hw_report.py` funcione sin rutas del servidor. Requiere `jsonschema`; cree un venv",
+        "local con `python3 -m venv .venv` e instale `packages/protocol/requirements.txt`.",
+        "",
         "La verificación completa de integridad se documenta en `docs/README.md`.",
+        "La recuperación completa se documenta en `docs/hardware/p2-full-recovery.md`.",
+        "Los offsets y particiones verificados están en `docs/hardware/p2-flash-layout.md`.",
     ])
     (destination / "KIT_MANIFEST.md").write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
 

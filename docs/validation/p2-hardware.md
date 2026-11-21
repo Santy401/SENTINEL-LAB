@@ -203,8 +203,8 @@ contiene `perRecordSha256`, `evidenceSha256`, `recordCount`, `runs`,
 
 ```bash
 python3 tools/hw_report.py --dir evidence/p2-20261121 \
-  --ssid SENTINEL-LAB --fw 0.3.1 --protocol 1.0.0 \
-  --max-clock-skew-ms 5000
+  --ssid SENTINEL-LAB --fw 0.3.1 --realtime-version 0.4.0 \
+  --protocol 1.0.0 --max-clock-skew-ms 5000
 ```
 
 El comando escribe `report.json` e `INFORME.md`. Imprime el resultado global y
@@ -278,11 +278,13 @@ código compila».
 propietario autoriza probar el entorno experimental:
 
 ```bash
-cd ~/Github/sentinel-firmware
-pio run -e sentinel_esp32s3_n16r8_realtime
-esptool.py chip-id
-esptool.py flash-id
-newgrp uucp -c 'pio run -e sentinel_esp32s3_n16r8_realtime -t upload --upload-port /dev/ttyACM0'
+cd ~/p2-hardware-kit
+esptool chip-id
+esptool flash-id
+newgrp uucp -c "tools/p2_flash_authorized.sh \
+  --environment sentinel_esp32s3_n16r8_realtime \
+  --port /dev/ttyACM0 \
+  --confirm 'FLASH sentinel_esp32s3_n16r8_realtime /dev/ttyACM0'"
 pio device monitor -p /dev/ttyACM0 -b 115200
 ```
 
@@ -290,10 +292,13 @@ Si la placa no vuelve a presentar `SENTINEL-LAB` o el informe falla, la
 recuperación autorizada es volver a la imagen estable:
 
 ```bash
-newgrp uucp -c 'pio run -e sentinel_esp32s3_n16r8_rf -t upload --upload-port /dev/ttyACM0'
+newgrp uucp -c "tools/p2_flash_authorized.sh \
+  --environment sentinel_esp32s3_n16r8_rf \
+  --port /dev/ttyACM0 \
+  --confirm 'FLASH sentinel_esp32s3_n16r8_rf /dev/ttyACM0'"
 ```
 
-No añadir `--erase-all`, no usar `esptool.py erase_flash` y no borrar NVS: la
+No añadir `--erase-all`, no usar `esptool erase-flash` y no borrar NVS: la
 configuración y la calibración del laboratorio viven ahí. El procedimiento
 completo de lecturas previas, cargas autorizadas y rollback está en
 [recuperación de hardware](../hardware/recovery.md). Tras un rollback, la ruta
@@ -304,5 +309,6 @@ quedar `NOT_VERIFIED`, no inventarse como PASS.
 
 Solo cuando el informe sobre evidencia real indique `PASS` en las nueve puertas
 se podrá cambiar el estado de P2 a **hardware tested** en la documentación.
-Hasta entonces el estado es **implemented / software tested, hardware untested**.
+Hasta entonces el estado es
+**P2 READY FOR AUTHORIZED HARDWARE FLASH — NOT YET FLASHED**.
 No se propone fusión, despliegue ni P3 sin autorización explícita.

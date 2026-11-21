@@ -8,7 +8,7 @@ del entorno experimental `sentinel_esp32s3_n16r8_realtime`. Está
 en P2**. La imagen estable es `sentinel_esp32s3_n16r8_rf` (v0.3.1).
 
 > **NO flashear sin autorización explícita del propietario.**  
-> **NO borrar NVS, NO usar `esptool.py erase_flash` y NO añadir `--erase-all`
+> **NO borrar NVS, NO usar `esptool erase-flash` y NO añadir `--erase-all`
 > como paso estándar.**  
 > **NO publicar credenciales, MAC, tokens ni rutas privadas en logs o informes.**  
 > HTTP y WebSocket quedan confinados al AP de laboratorio `SENTINEL-LAB`.
@@ -22,9 +22,9 @@ explícita**.
 Identidad USB y flash (no modifican la placa):
 
 ```bash
-cd ~/Github/sentinel-firmware
-esptool.py chip-id
-esptool.py flash-id
+cd ~/p2-hardware-kit
+esptool chip-id
+esptool flash-id
 ```
 
 Salida esperada, en términos generales: un ESP32-S3 con 16 MB de flash y 8 MB
@@ -96,8 +96,10 @@ informe PASS.
 experimental:
 
 ```bash
-pio run -e sentinel_esp32s3_n16r8_realtime
-newgrp uucp -c 'pio run -e sentinel_esp32s3_n16r8_realtime -t upload --upload-port /dev/ttyACM0'
+newgrp uucp -c "tools/p2_flash_authorized.sh \
+  --environment sentinel_esp32s3_n16r8_realtime \
+  --port /dev/ttyACM0 \
+  --confirm 'FLASH sentinel_esp32s3_n16r8_realtime /dev/ttyACM0'"
 ```
 
 Tras el reset, verificar solo lectura:
@@ -109,7 +111,8 @@ curl -fsS http://192.168.4.1/api/realtime/status
 python3 tools/hw_capture.py --dir evidence/p2-intento --host 192.168.4.1 \
   --phase associated --seconds 120 --distance-m 1.0
 python3 tools/hw_report.py --dir evidence/p2-intento \
-  --ssid SENTINEL-LAB --fw 0.3.1 --protocol 1.0.0 --max-clock-skew-ms 5000
+  --ssid SENTINEL-LAB --fw 0.3.1 --realtime-version 0.4.0 \
+  --protocol 1.0.0 --max-clock-skew-ms 5000
 ```
 
 Si el token de gateway está autorizado para la sesión, léalo de forma segura
@@ -119,7 +122,10 @@ SENTINEL_HW_BEARER`. No lo escriba en el historial ni en un archivo.
 Rollback autorizado a la imagen funcional:
 
 ```bash
-newgrp uucp -c 'pio run -e sentinel_esp32s3_n16r8_rf -t upload --upload-port /dev/ttyACM0'
+newgrp uucp -c "tools/p2_flash_authorized.sh \
+  --environment sentinel_esp32s3_n16r8_rf \
+  --port /dev/ttyACM0 \
+  --confirm 'FLASH sentinel_esp32s3_n16r8_rf /dev/ttyACM0'"
 pio device monitor -p /dev/ttyACM0 -b 115200
 curl -fsS http://192.168.4.1/api/rf
 ```
@@ -134,7 +140,7 @@ como reinicio, no como recuperación de la misma sesión.
 la configuración persistente del laboratorio (por ejemplo `deviceId`,
 emparejamientos y modelos de calibración) vive en NVS. Esa configuración no debe
 borrarse salvo un incidente documentado y con autorización explícita.
-`esptool.py erase_flash` y `--erase-all` borran NVS junto con la aplicación y
+`esptool erase-flash` y `--erase-all` borran NVS junto con la aplicación y
 pueden destruir evidencia de identidad y calibraciones acumuladas. El flasheo
 normal de PlatformIO ya verifica bootloader, tabla de particiones y aplicación
 sin tocar el rango NVS.
@@ -159,8 +165,11 @@ En el kit portable de Arch, las dos cargas autorizadas pueden ejecutarse con
 opciones de borrado. Los scripts de preflight, puerto serie, HTTP y WebSocket
 del kit son de solo lectura. El inventario y los límites del respaldo están en
 [`v031-backup-inventory.md`](v031-backup-inventory.md) y el procedimiento de
-transferencia en [`p2-kit.md`](p2-kit.md).
+transferencia en [`p2-kit.md`](p2-kit.md). Los offsets verificados están en
+[`p2-flash-layout.md`](p2-flash-layout.md). La recuperación completa desde la
+imagen original de 16 MiB, que sí reemplaza NVS, está preparada pero no
+ejecutada en [`p2-full-recovery.md`](p2-full-recovery.md).
 
 La aceptación final de hardware exige un `INFORME.md` con todas las puertas en
 PASS generado desde evidencia real. Hasta entonces el estado documentado sigue
-siendo **implemented / software tested, hardware untested**.
+siendo **P2 READY FOR AUTHORIZED HARDWARE FLASH — NOT YET FLASHED**.

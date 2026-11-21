@@ -30,9 +30,11 @@ python3 -m unittest discover -s packages/protocol/tests -v
 python3 packages/protocol/validate_protocol.py build/firmware-*.json
 python3 -m py_compile tools/hw_common.py tools/hw_capture.py tools/hw_report.py \
   tools/p2_preflight.py tools/p2_serial_check.py tools/p2_http_check.py \
-  tools/p2_ws_probe.py tools/p2_make_kit.py
-bash -n tools/p2_flash_authorized.sh
+  tools/p2_ws_probe.py tools/p2_make_kit.py tools/p2_layout_check.py
+bash -n tools/p2_esptool.sh tools/p2_flash_authorized.sh \
+  tools/p2_restore_full_authorized.sh
 python3 tools/hw_report.py --help
+python3 tools/p2_layout_check.py --kit ~/p2-hardware-kit
 for env in sentinel_esp32s3_n16r8 sentinel_esp32s3_n16r8_diag \
            sentinel_esp32s3_n16r8_v02 sentinel_esp32s3_n16r8_rf \
            sentinel_esp32s3_n16r8_realtime; do
@@ -54,12 +56,15 @@ versionaron ni imprimieron credenciales.
 | Ejemplos válidos del contrato | 9 OK |
 | Casos negativos del contrato | 16 rechazados |
 | Fixtures generados por el firmware | 8 OK |
-| `scripts/check-repository.py` | OK (196 archivos) |
+| `scripts/check-repository.py` | OK (201 archivos) |
 | Conventional Commits self-test | OK (7 casos) |
 | Parse YAML de workflows | OK |
 | Entornos PlatformIO | 5/5 SUCCESS |
-| Sintaxis del kit P2 (`py_compile`) | 3/3 OK |
+| Sintaxis del kit P2 (`py_compile`) | 9/9 OK |
+| Sintaxis de scripts Bash del kit | 3/3 OK |
 | `python3 tools/hw_report.py --help` | OK |
+| `p2_layout_check.py` sobre el kit | 21 PASS, 0 FAIL |
+| Detección de esptool | `esptool (PATH)` v5.6.0 → `write-flash` |
 
 La cobertura host añadida por P2 incluye codec RFC 6455 (incluidas dos tramas en
 una sola lectura y tramas sobredimensionadas), origen de tiempo y bloqueo hasta
@@ -150,19 +155,33 @@ cualquier payload con `simulated=true`, `simulation=true`,
 contrato de 13 campos del entorno `_realtime`; no se ejecutó contra una placa.
 
 Se añadió además un kit portable para Arch Linux. `tools/p2_preflight.py`,
-`p2_serial_check.py`, `p2_http_check.py` y `p2_ws_probe.py` son de solo lectura;
-`tools/p2_make_kit.py` ensambla los artefactos y genera `SHA256SUMS`; y
-`tools/p2_flash_authorized.sh` es el único script de escritura, con confirmación
-literal y sin opciones de borrado. El kit incluye el respaldo v0.3.1, la imagen
-v0.4.0, manifiestos, actas, matriz física y directorios de evidencia vacía.
+`p2_serial_check.py`, `p2_http_check.py`, `p2_ws_probe.py` y
+`p2_layout_check.py` son de solo lectura; `tools/p2_make_kit.py` ensambla los
+artefactos y genera `SHA256SUMS`; y hay dos scripts de escritura con
+confirmaciones literales distintas y sin opciones de borrado:
+`p2_flash_authorized.sh` (recuperación parcial) y
+`p2_restore_full_authorized.sh` (recuperación completa desde la imagen original,
+que reemplaza NVS). La detección de esptool se centralizó en `p2_esptool.sh`,
+sin fijar versiones de PlatformIO. El kit incluye el respaldo v0.3.1, la imagen
+v0.4.0, el validador y esquemas de protocolo, manifiestos, actas, matriz física
+y directorios de evidencia vacía. **La imagen completa de 16 MiB no se copia al
+kit ni se publica.**
+
+Se corrigió una inconsistencia de versiones: `--fw 0.3.1` designa la API HTTP,
+que v0.4.0 conserva por compatibilidad, mientras `realtimeVersion` y
+`firmwareVersion` de Protocol v1 valen `0.4.0`. `hw_report.py` y
+`p2_http_check.py` aceptan ahora `--realtime-version` / `--expected-realtime`.
+Las rutas absolutas del servidor de compilación se sustituyeron por rutas
+relativas al usuario.
 
 El flujo de verificación del kit se ejecutó solo en host: compilación Python,
-ayuda del informador, preflight sobre el repositorio y sobre el kit generado, y
-comprobación de integridad del repositorio. **No se capturó hardware, no se
-flasheó la placa y no se generó un informe PASS real.** El procedimiento
-operatorio está en `docs/validation/p2-hardware.md`, la matriz en
-`docs/validation/p2-physical-matrix.md`, el kit en `docs/hardware/p2-kit.md` y la
-recuperación en `docs/hardware/recovery.md`.
+ayuda del informador, preflight, comprobación de layout, detección de esptool y
+comprobación de integridad. **No se capturó hardware, no se flasheó la placa y
+no se generó un informe PASS real.** El procedimiento operatorio está en
+`docs/validation/p2-hardware.md`, la matriz en
+`docs/validation/p2-physical-matrix.md`, el kit en `docs/hardware/p2-kit.md`, los
+offsets en `docs/hardware/p2-flash-layout.md` y la recuperación en
+`docs/hardware/recovery.md` y `docs/hardware/p2-full-recovery.md`.
 
 ## 8. Riesgos pendientes
 

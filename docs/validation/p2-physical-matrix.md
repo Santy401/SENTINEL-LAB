@@ -9,7 +9,7 @@
 | `BLOCKED` | Requiere autorización de flasheo, token o intervención física aún no concedida. |
 | `NOT TESTED` | No existe captura real de la prueba. |
 
-**Estado global actual:** `IMPLEMENTED / SOFTWARE TESTED / HARDWARE VALIDATION PENDING`.
+**Estado global actual:** `P2 READY FOR AUTHORIZED HARDWARE FLASH — NOT YET FLASHED`.
 
 No se han ejecutado pruebas sobre el ESP32-S3 desde este flujo. Las filas
 marcadas `PASS` en la sección de preparación son verificaciones de software o
@@ -24,7 +24,10 @@ artefactos, no mediciones de hardware.
 | P-03 | Compilación v0.4.0 | `pio run -e ..._realtime` = SUCCESS | `PASS` | `docs/validation/p2-build-record.md` |
 | P-04 | Pruebas host | `tools/check_software.py` y contrato v1 OK | `PASS` | `docs/validation/p2-software.md` |
 | P-05 | Kit portable | Manifiesto y scripts generados sin credenciales | `PASS` | `KIT_MANIFEST.md`, `SHA256SUMS` |
-| P-06 | Recuperación real | Rollback ejecutado sobre el dispositivo | `BLOCKED` | Autorización pendiente |
+| P-06 | Offsets y particiones | Tabla decodificada; NVS fuera de las cuatro regiones | `PASS` | `docs/hardware/p2-flash-layout.md`, `p2_layout_check.py` |
+| P-07 | Compatibilidad esptool | Detección y versión validadas con esptool v5.6.0 | `PASS` | `tools/p2_esptool.sh`, `docs/hardware/p2-flash-layout.md` |
+| P-08 | Respaldo completo original | 16 777 216 B y SHA-256 verificados; imagen no publicada | `PASS` | `docs/hardware/p2-full-recovery.md` |
+| P-09 | Recuperación real | Rollback ejecutado sobre el dispositivo | `BLOCKED` | Autorización pendiente |
 
 ## 1. Arranque
 
@@ -109,7 +112,8 @@ reloj requiere autorización explícita y token seguro.
 | R-03 | Compatibilidad de artefactos | Comparar offsets y particiones | `0x0`, `0x8000`, `0xe000`, `0x10000` documentados | `PASS` | `docs/hardware/v031-backup-inventory.md` |
 | R-04 | Procedimiento documentado | Revisar guía de recuperación | Comandos, advertencias y criterios presentes | `PASS` | `docs/hardware/recovery.md` |
 | R-05 | Recuperación real | Rollback autorizado a `_rf` | AP y rutas v0.3.1 operativas; evidencia archivada | `BLOCKED` | `evidence/results/rollback.json` |
-| R-06 | Preservación de NVS | Confirmar que no se ejecutó `erase_flash` | Log sin borrado; configuración conservada | `BLOCKED` | `evidence/checksums/flash-command.log` |
+| R-06 | Preservación de NVS | Confirmar que no se ejecutó `erase-flash` | Log sin borrado; configuración conservada | `BLOCKED` | `evidence/checksums/flash-command.log` |
+| R-07 | Recuperación completa real | Restauración autorizada desde imagen de 16 MiB | Imagen íntegra, NVS reemplazado y evidencia archivada | `BLOCKED` | `evidence/results/full-restore.json` |
 
 ## Cierre
 

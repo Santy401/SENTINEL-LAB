@@ -34,6 +34,13 @@ SemVer cuando exista una release oficial.
 - Inventario de recuperabilidad del respaldo v0.3.1, registro de compilación del
   commit P2 y matriz de pruebas físicas con estados `PASS`/`FAIL`/`BLOCKED`/
   `NOT TESTED`.
+- Verificador de solo lectura `tools/p2_layout_check.py` para offsets, tabla de
+  particiones y no superposición con NVS.
+- Helper `tools/p2_esptool.sh` con detección robusta de esptool y validación de
+  versión; script `p2_restore_full_authorized.sh` para recuperación completa
+  custodiada desde la imagen original de 16 MiB, sin copiar ni publicar la imagen.
+- Documentación `docs/hardware/p2-flash-layout.md` y
+  `docs/hardware/p2-full-recovery.md`.
 
 ### Changed
 
@@ -50,6 +57,11 @@ SemVer cuando exista una release oficial.
   `timestamp`, no con un campo `epochMs`.
 - Arquitectura y contrato reflejan el kit P2 y mantienen el estado de hardware
   como `untested` hasta un informe PASS sobre captura real.
+- El kit elimina dependencias de rutas absolutas del servidor de compilación e
+  incluye el validador y los esquemas de protocolo para funcionar desde Arch.
+- `--fw 0.3.1` queda documentado como versión de la API HTTP; se añade
+  `--realtime-version 0.4.0` para `hw_report.py` y `--expected-realtime` para
+  `p2_http_check.py`.
 
 ### Fixed
 
@@ -64,6 +76,15 @@ SemVer cuando exista una release oficial.
   `rfc3339-validator`.
 - Los errores no devuelven el payload completo y el CI exige que cada caso
   negativo sea rechazado.
+- `hw_report.py` ya no compara `firmwareVersion` de Protocol v1 con la versión
+  HTTP `0.3.1`: usa `realtimeVersion`/`0.4.0`, evitando rechazar telemetría v1
+  válida.
+- `p2_flash_authorized.sh` ya no usa `pio pkg exec --tool esptool@…`, opción
+  inexistente en PlatformIO 6.2.0; detecta `esptool`, `esptool.py`,
+  `python3 -m esptool` o `pio pkg exec -p tool-esptool -c …`, y selecciona
+  `write-flash` en esptool 5.x.
+- La recuperación completa coloca `--flash-size 16MB` después del subcomando
+  `write-flash`, como exige esptool 5.6.0.
 - El servidor libera la ranura de un par que cierra localmente en lugar de
   retenerla hasta el timeout.
 - La despedida del cliente se confirma antes de cerrar el socket y las tramas

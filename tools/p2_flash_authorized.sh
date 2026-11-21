@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Authorized write operation ONLY. This script is never called by preflight.
-# It writes the four explicit flash regions and never erases NVS or the full chip.
+# It writes four explicit flash regions and never erases NVS or the full chip.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 KIT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+
+# shellcheck source=p2_esptool.sh
+source "${SCRIPT_DIR}/p2_esptool.sh"
+
 ENVIRONMENT=""
 PORT="/dev/ttyACM0"
 CONFIRM=""
@@ -20,6 +24,12 @@ Uso:
 
 Esta operación ESCRIBE EN FLASH. No se ejecuta automáticamente.
 No se aceptan opciones de borrado; NVS permanece intacto.
+
+El ejecutable de esptool se detecta en este orden:
+  1. esptool      (CLI moderna, recomendada)
+  2. esptool.py   (alias en desuso)
+  3. python3 -m esptool
+  4. pio pkg exec -p tool-esptool -c 'esptool.py ...'  (sin fijar versión)
 EOF
 }
 
@@ -45,7 +55,7 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 0
       ;;
-    --erase|--erase-all|--erase-flash)
+    --erase|--erase-all|--erase-flash|--erase_region|--erase-region)
       echo "FAIL: este kit no permite borrar flash ni NVS" >&2
       exit 2
       ;;
@@ -98,6 +108,10 @@ if [[ ! -e "${PORT}" ]]; then
   echo "FAIL: puerto serie no presente: ${PORT}" >&2
   exit 2
 fi
+if [[ ! -c "${PORT}" ]]; then
+  echo "FAIL: ${PORT} no es un dispositivo de carácter" >&2
+  exit 2
+fi
 if [[ ! -r "${PORT}" || ! -w "${PORT}" ]]; then
   echo "FAIL: sin permisos de lectura/escritura sobre ${PORT}" >&2
   echo "Use una sesión con el grupo uucp/dialout correspondiente." >&2
@@ -108,13 +122,23 @@ if ! id -nG | tr ' ' '\n' | grep -Eq '^(uucp|dialout)$'; then
   exit 2
 fi
 
-ESPTOOL=()
-if command -v pio >/dev/null 2>&1; then
-  ESPTOOL=(pio pkg exec --tool esptool@2.50400.0 -- esptool.py)
-elif command -v esptool.py >/dev/null 2>&1; then
-  ESPTOOL=(esptool.py)
-else
-  echo "FAIL: no se encontró esptool.py ni PlatformIO para invocarlo" >&2
+if command -v udevadm >/dev/null 2>&1; then
+  udev_output="$(udevadm info --query=property --name="${PORT}" 2>/dev/null || true)"
+  udev_vid="$(printf '%s\n' "${udev_output}" | sed -n 's/^ID_VENDOR_ID=//p' | head -1)"
+  udev_pid="$(printf '%s\n' "${udev_output}" | sed -n 's/^ID_MODEL_ID=//p' | head -1)"
+  if [[ -n "${udev_vid}" || -n "${udev_pid}" ]] && \
+     [[ "${udev_vid,,}" != "1a86" || "${udev_pid,,}" != "55d3" ]]; then
+    echo "FAIL: VID:PID del puerto no coincide con 1A86:55D3 (${udev_vid}:${udev_pid})" >&2
+    exit 2
+  fi
+fi
+
+if ! p2_esptool_detect; then
+  echo "FAIL: no se encontró un ejecutable de esptool compatible." >&2
+  echo "Instale esptool en el PATH o use un entorno con PlatformIO y tool-esptool." >&2
+  exit 2
+fi
+if ! p2_esptool_validate; then
   exit 2
 fi
 
@@ -123,12 +147,16 @@ echo "Entorno:     ${ENVIRONMENT}"
 echo "Puerto:      ${PORT}"
 echo "Origen:      ${DIR}"
 echo "NVS:         NO se borra"
+echo "esptool:     ${P2_ESPTOOL_LABEL} v${P2_ESPTOOL_VERSION}"
+echo "Comando:     ${P2_WRITE_SUBCOMMAND}"
 echo "Confirmado:  ${CONFIRM}"
+echo
 
-"${ESPTOOL[@]}" \
+p2_esptool_run \
+  --chip esp32s3 \
   --port "${PORT}" \
   --baud 460800 \
-  write_flash \
+  "${P2_WRITE_SUBCOMMAND}" \
   0x00000 "${DIR}/bootloader.bin" \
   0x08000 "${DIR}/partitions.bin" \
   0x0e000 "${DIR}/boot_app0.bin" \

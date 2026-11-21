@@ -24,7 +24,7 @@ import hw_common as hw  # noqa: E402
 EXPECTED_SSID = "SENTINEL-LAB"
 EXPECTED_VID_PID = ("1a86", "55d3")
 REQUIRED_TOOLS = ("sha256sum", "curl")
-OPTIONAL_TOOLS = ("pio", "nmcli", "lsusb")
+OPTIONAL_TOOLS = ("pio", "esptool", "nmcli", "lsusb")
 FORBIDDEN_NAMES = {"secrets.h", ".env"}
 FORBIDDEN_SUFFIXES = (".pem", ".key", ".p12")
 
@@ -226,7 +226,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1],
                         help="kit root or repository root")
     parser.add_argument("--backup", type=Path,
-                        default=Path("/home/santy401/.sentinel-backups/v0.3.1-rf-20261121T194718Z"),
+                        default=Path.home() / ".sentinel-backups" / "v0.3.1-rf-20261121T194718Z",
                         help="verified v0.3.1 backup used only in repository mode")
     parser.add_argument("--port", type=Path, default=Path("/dev/ttyACM0"),
                         help="serial port to inspect without opening it")

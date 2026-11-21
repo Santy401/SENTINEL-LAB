@@ -90,7 +90,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--dir", required=True, type=Path, help="Directorio de evidencia")
     parser.add_argument("--ssid", required=True, help="SSID esperado del AP")
-    parser.add_argument("--fw", required=True, help="Versión de firmware esperada")
+    parser.add_argument("--fw", required=True,
+                        help="Versión HTTP esperada (0.3.1 se conserva por compatibilidad de API)")
+    parser.add_argument("--realtime-version", default="0.4.0",
+                        help="Versión esperada en realtimeVersion y firmwareVersion de Protocol v1")
     parser.add_argument("--protocol", required=True, help="Versión de Protocol esperada")
     parser.add_argument(
         "--max-clock-skew-ms",
@@ -424,6 +427,10 @@ def clock_gate(
             failures.append(f"fw {body.get('fw')!r} distinto del esperado")
         if not isinstance(body.get("realtimeVersion"), str) or not body["realtimeVersion"]:
             failures.append("realtimeVersion ausente o no textual")
+        elif body["realtimeVersion"] != args.realtime_version:
+            failures.append(
+                f"realtimeVersion {body['realtimeVersion']!r} distinto de {args.realtime_version!r}"
+            )
 
     hellos = envelopes_of_type(records, "connection.hello")
     matching: list[int] = []
@@ -519,8 +526,10 @@ def rf_gate(records: list[dict[str, Any]], args: argparse.Namespace) -> dict[str
             failures.append("rf.telemetry con clientCount incoherente")
         if payload.get("simulated") is not False:
             failures.append("rf.telemetry no declara simulated=false")
-        if payload.get("firmwareVersion") != args.fw:
-            failures.append("rf.telemetry con firmwareVersion distinto del esperado")
+        if payload.get("firmwareVersion") != args.realtime_version:
+            failures.append(
+                f"rf.telemetry con firmwareVersion distinto de {args.realtime_version!r}"
+            )
         values = [
             client.get("rssiDbm")
             for client in clients
@@ -660,8 +669,10 @@ def runtime_gate(records: list[dict[str, Any]], args: argparse.Namespace) -> dic
                 failures.append(f"{field} con tipo inesperado")
         if body["fw"] != args.fw:
             failures.append("fw distinto del esperado")
-        if not body["realtimeVersion"]:
-            failures.append("realtimeVersion vacío")
+        if body.get("realtimeVersion") != args.realtime_version:
+            failures.append(
+                f"realtimeVersion {body.get('realtimeVersion')!r} distinto de {args.realtime_version!r}"
+            )
         if not body["clockSynced"]:
             failures.append("clockSynced=false en la ruta de salud")
         if body["freeHeapBytes"] <= 0 or body["minFreeHeapBytes"] <= 0:
@@ -845,6 +856,7 @@ def main(argv: list[str] | None = None) -> int:
             "evidenceDir": str(args.dir),
             "ssid": args.ssid,
             "fw": args.fw,
+            "realtimeVersion": args.realtime_version,
             "protocol": args.protocol,
             "maxClockSkewMs": args.max_clock_skew_ms,
         },

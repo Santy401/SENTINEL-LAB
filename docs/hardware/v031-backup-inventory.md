@@ -4,7 +4,7 @@
 
 Directorio inspeccionado:
 
-`/home/santy401/.sentinel-backups/v0.3.1-rf-20261121T194718Z`
+`~/.sentinel-backups/v0.3.1-rf-20261121T194718Z`
 
 Fecha declarada de creación: `2026-11-21T19:47:18Z`. Procedencia declarada:
 `origin/main` en `485215d6f9b4986dbe6dd3b44278af2ac446c6df`, entorno
@@ -61,7 +61,7 @@ dispositivo**.
 | `boot_app0` | Recuperable desde artefacto verificado |
 | Aplicación v0.3.1 | Recuperable desde artefacto verificado |
 | NVS, emparejamientos y calibraciones | **No recuperables desde este respaldo** |
-| Imagen completa de flash | **No disponible** |
+| Imagen completa de flash | **No disponible en este respaldo de cuatro binarios**; sí existe por separado en `~/sentinel-backups/original-v0.3.1/flash-full-16mb.bin` (16 777 216 B, SHA-256 `f6515d77…2ae`), verificada y funcional |
 | Credenciales Wi-Fi | No incluidas; deben existir solo en `include/secrets.h` local antes de compilar |
 | Reproducibilidad byte a byte | No reclamada |
 
@@ -83,7 +83,9 @@ repositorio. Las rutas vigentes son:
 - `docs/hardware/p2-kit.md`
 
 No se modificó el manifiesto original para conservar su valor histórico. El kit
-portable incluye este documento y la corrección de rutas.
+portable incluye este documento y la corrección de rutas. La imagen completa
+original no se copia al kit ni se publica; su procedimiento de uso está en
+[`p2-full-recovery.md`](p2-full-recovery.md).
 
 Antes de cualquier recuperación real debe autorizarse por escrito la operación
 de escritura, verificarse el puerto serie en el PC de Arch y conservarse la

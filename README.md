@@ -50,6 +50,9 @@ SENTINEL Core v0.4.0 adds bounded WebSocket telemetry in a separate `sentinel_es
 
 See [SENTINEL Core v0.4.0](docs/realtime-core.md), the [software validation report](docs/validation/p2-software.md), and the [portable P2 hardware kit](docs/hardware/p2-kit.md).
 
+**P2 status:** Ready for authorized hardware flash — not yet flashed.
+Flash offsets and partition layout are documented in [p2-flash-layout.md](docs/hardware/p2-flash-layout.md); the guarded full-image recovery procedure is in [p2-full-recovery.md](docs/hardware/p2-full-recovery.md).
+
 **Status:** Experimental — not production-ready.
 
 ## Technology
