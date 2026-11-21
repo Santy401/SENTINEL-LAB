@@ -35,7 +35,18 @@ python3 -m py_compile tools/hw_common.py tools/hw_capture.py tools/hw_report.py
 python3 scripts/check-repository.py
 python3 tools/hw_report.py --help
 python3 tools/check_software.py
+python3 tools/p2_preflight.py --root .
+python3 tools/p2_serial_check.py --port /dev/ttyACM0
+python3 tools/p2_http_check.py --host 192.168.4.1
+python3 tools/p2_ws_probe.py --host 192.168.4.1 --seconds 8
 ```
+
+Los cuatro scripts añadidos son de solo lectura. El kit portable para Arch, su
+procedimiento de transferencia y el script de escritura con confirmación
+literal están descritos en [el kit P2](../hardware/p2-kit.md). La matriz
+completa de estados físicos está en
+[la matriz P2](p2-physical-matrix.md) y el acta de compilación en
+[el registro P2](p2-build-record.md).
 
 El validador canónico usa las dependencias ya presentes en el repositorio. Para
 que `protocol.all_envelopes_valid` pueda evaluarse, créese un entorno aislado:

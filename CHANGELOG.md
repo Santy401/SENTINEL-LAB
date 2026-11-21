@@ -28,6 +28,12 @@ SemVer cuando exista una release oficial.
   autorizado, rollback y reglas anti-fabricación.
 - Documentación del contrato de 13 campos de `GET /api/realtime/status`, solo
   presente en el entorno `_realtime`.
+- Kit portable P2 para Arch Linux: `tools/p2_make_kit.py`, preflight de solo
+  lectura, comprobación de puerto serie, HTTP y WebSocket, y script de escritura
+  con confirmación literal sin borrado de NVS.
+- Inventario de recuperabilidad del respaldo v0.3.1, registro de compilación del
+  commit P2 y matriz de pruebas físicas con estados `PASS`/`FAIL`/`BLOCKED`/
+  `NOT TESTED`.
 
 ### Changed
 

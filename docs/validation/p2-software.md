@@ -28,7 +28,10 @@ python3 packages/protocol/validate_protocol.py packages/protocol/examples/valid
 python3 packages/protocol/validate_protocol.py --expect-invalid packages/protocol/examples/invalid
 python3 -m unittest discover -s packages/protocol/tests -v
 python3 packages/protocol/validate_protocol.py build/firmware-*.json
-python3 -m py_compile tools/hw_common.py tools/hw_capture.py tools/hw_report.py
+python3 -m py_compile tools/hw_common.py tools/hw_capture.py tools/hw_report.py \
+  tools/p2_preflight.py tools/p2_serial_check.py tools/p2_http_check.py \
+  tools/p2_ws_probe.py tools/p2_make_kit.py
+bash -n tools/p2_flash_authorized.sh
 python3 tools/hw_report.py --help
 for env in sentinel_esp32s3_n16r8 sentinel_esp32s3_n16r8_diag \
            sentinel_esp32s3_n16r8_v02 sentinel_esp32s3_n16r8_rf \
@@ -51,7 +54,7 @@ versionaron ni imprimieron credenciales.
 | Ejemplos válidos del contrato | 9 OK |
 | Casos negativos del contrato | 16 rechazados |
 | Fixtures generados por el firmware | 8 OK |
-| `scripts/check-repository.py` | OK (186 archivos) |
+| `scripts/check-repository.py` | OK (196 archivos) |
 | Conventional Commits self-test | OK (7 casos) |
 | Parse YAML de workflows | OK |
 | Entornos PlatformIO | 5/5 SUCCESS |
@@ -146,10 +149,19 @@ cualquier payload con `simulated=true`, `simulation=true`,
 `FAIL`. La ruta `/api/realtime/status` se documenta contra el
 contrato de 13 campos del entorno `_realtime`; no se ejecutó contra una placa.
 
+Se añadió además un kit portable para Arch Linux. `tools/p2_preflight.py`,
+`p2_serial_check.py`, `p2_http_check.py` y `p2_ws_probe.py` son de solo lectura;
+`tools/p2_make_kit.py` ensambla los artefactos y genera `SHA256SUMS`; y
+`tools/p2_flash_authorized.sh` es el único script de escritura, con confirmación
+literal y sin opciones de borrado. El kit incluye el respaldo v0.3.1, la imagen
+v0.4.0, manifiestos, actas, matriz física y directorios de evidencia vacía.
+
 El flujo de verificación del kit se ejecutó solo en host: compilación Python,
-ayuda del informador y comprobación de integridad del repositorio. **No se
-capturó hardware, no se flasheó la placa y no se generó un informe PASS real.**
-El procedimiento operatorio está en `docs/validation/p2-hardware.md` y la
+ayuda del informador, preflight sobre el repositorio y sobre el kit generado, y
+comprobación de integridad del repositorio. **No se capturó hardware, no se
+flasheó la placa y no se generó un informe PASS real.** El procedimiento
+operatorio está en `docs/validation/p2-hardware.md`, la matriz en
+`docs/validation/p2-physical-matrix.md`, el kit en `docs/hardware/p2-kit.md` y la
 recuperación en `docs/hardware/recovery.md`.
 
 ## 8. Riesgos pendientes

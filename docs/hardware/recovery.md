@@ -154,6 +154,13 @@ Toda intervención debe quedar descrita con:
 - rutas de la evidencia y del `INFORME.md`,
 - decisión de aceptar el rollback o repetir la prueba.
 
+En el kit portable de Arch, las dos cargas autorizadas pueden ejecutarse con
+`tools/p2_flash_authorized.sh`, que exige una confirmación literal y prohíbe
+opciones de borrado. Los scripts de preflight, puerto serie, HTTP y WebSocket
+del kit son de solo lectura. El inventario y los límites del respaldo están en
+[`v031-backup-inventory.md`](v031-backup-inventory.md) y el procedimiento de
+transferencia en [`p2-kit.md`](p2-kit.md).
+
 La aceptación final de hardware exige un `INFORME.md` con todas las puertas en
 PASS generado desde evidencia real. Hasta entonces el estado documentado sigue
 siendo **implemented / software tested, hardware untested**.

@@ -48,7 +48,7 @@ The current firmware supports HTTP-based monitoring, Wi-Fi RSSI measurements, mo
 
 SENTINEL Core v0.4.0 adds bounded WebSocket telemetry in a separate `sentinel_esp32s3_n16r8_realtime` build. The stable v0.3.1 HTTP firmware is unchanged. The WebSocket transport is software-tested only; it has not been flashed or validated on hardware. A redesigned web interface, gateway services, and native applications remain planned.
 
-See [SENTINEL Core v0.4.0](docs/realtime-core.md) and the [software validation report](docs/validation/p2-software.md).
+See [SENTINEL Core v0.4.0](docs/realtime-core.md), the [software validation report](docs/validation/p2-software.md), and the [portable P2 hardware kit](docs/hardware/p2-kit.md).
 
 **Status:** Experimental — not production-ready.
 
