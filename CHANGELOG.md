@@ -11,14 +11,22 @@ SemVer cuando exista una release oficial.
 - Fundación del repositorio SENTINEL-LAB.
 - Gobernanza, plantillas GitHub y workflows base de CI.
 - Auditoría P0 e inventario del firmware funcional.
+- Contrato de protocolo v1.0.0 con esquemas estrictos y validador.
+- Ejemplos válidos, casos negativos y workflow de validación de protocolo.
 
 ### Changed
 
 - Documentación de estado real del proyecto y migración por etapas.
 
+### Fixed
+
+- Los workflows de firmware copian la plantilla de Wi-Fi en el runner de CI sin
+  publicar credenciales reales.
+
 ### Security
 
 - Verificación automática de secretos y rutas prohibidas antes de publicar.
+- El contrato exige `simulated: false` en todos los mensajes de medición.
 
 ## v0.3.1
 

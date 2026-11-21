@@ -76,6 +76,14 @@ HTTP y WebSocket locales son adecuados solo dentro del AP de laboratorio. El
 gateway remoto debe usar TLS, autenticación por dispositivo y endpoints
 administrativos no públicos.
 
+## Protocolo compartido
+
+El contrato v1.0.0 define un sobre JSON versionado y transport-independent para
+movimiento, RF, estado, eventos, ciclo de conexión y errores. Es la base de los
+adaptadores futuros; no sustituye la API HTTP v0.3.1. Ver
+[contrato](../protocol-contract.md) y
+[ADR-0004](../decisions/ADR-0004-protocolo-v1.md).
+
 ## Migración
 
 La reorganización en monorepo es incremental. El firmware funcional no se mueve
