@@ -25,6 +25,13 @@ for env in sentinel_esp32s3_n16r8 sentinel_esp32s3_n16r8_diag \
 done
 ```
 
+## Configuración privada en CI
+
+GitHub Actions copia `include/secrets.example.h` a `include/secrets.h` solo en el
+workspace del runner. No se usan credenciales reales y el archivo resultante no
+se versiona. Esto permite compilar sin publicar configuración privada. El binario
+de CI usa valores de ejemplo y **no debe flashearse**.
+
 ## Hardware
 
 No flashear sin autorización explícita. Antes de cargar:
