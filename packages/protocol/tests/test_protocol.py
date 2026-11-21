@@ -9,6 +9,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from jsonschema import FormatChecker
+from jsonschema.exceptions import FormatError
+
 PROTOCOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROTOCOL_ROOT))
 
@@ -111,6 +114,27 @@ class ProtocolContractTests(unittest.TestCase):
             path.write_text('{"sequence": 1, "sequence": 2}', encoding="utf-8")
             with self.assertRaises(ValueError):
                 load_json(path)
+
+    def test_schema_ids_are_resolvable(self) -> None:
+        schemas = {path.name: load_json(path) for path in SCHEMA_DIR.glob("*.schema.json")}
+        ids = {schema["$id"] for schema in schemas.values()}
+        self.assertEqual(len(ids), len(schemas))
+        for schema in schemas.values():
+            self.assertTrue(schema["$id"].startswith("https://"))
+        envelope = schemas["envelope.schema.json"]
+        refs = [
+            branch["properties"]["payload"]["$ref"]
+            for branch in envelope["oneOf"]
+        ]
+        self.assertTrue(refs)
+        for ref in refs:
+            self.assertIn(ref, ids)
+
+    def test_format_checker_rejects_impossible_date(self) -> None:
+        checker = FormatChecker()
+        self.assertIn("date-time", checker.checkers)
+        with self.assertRaises(FormatError):
+            checker.check("2026-02-30T16:10:03Z", "date-time")
 
     def test_schema_files_are_valid_json(self) -> None:
         paths = sorted(SCHEMA_DIR.glob("*.schema.json"))

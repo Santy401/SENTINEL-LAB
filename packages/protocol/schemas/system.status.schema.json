@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentinel-lab.local/schemas/1.0.0/system.status.schema.json",
+  "$id": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/system.status.schema.json",
   "title": "System status payload",
   "description": "Runtime state of a SENTINEL-LAB node.",
   "type": "object",

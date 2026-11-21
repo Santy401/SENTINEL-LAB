@@ -43,7 +43,8 @@ def load_json(path: Path) -> Any:
     )
 
 
-def _build_registry() -> Registry:
+def build_registry() -> Registry:
+    """Build the local registry for the absolute, resolvable schema IDs."""
     resources = []
     for path in sorted(SCHEMA_DIR.glob("*.schema.json")):
         schema = json.loads(path.read_text(encoding="utf-8"))
@@ -51,7 +52,7 @@ def _build_registry() -> Registry:
     return Registry().with_resources(resources)
 
 
-REGISTRY = _build_registry()
+REGISTRY = build_registry()
 ENVELOPE_SCHEMA = json.loads((SCHEMA_DIR / "envelope.schema.json").read_text(encoding="utf-8"))
 VALIDATOR = Draft202012Validator(
     ENVELOPE_SCHEMA,

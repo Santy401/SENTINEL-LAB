@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentinel-lab.local/schemas/1.0.0/rf.telemetry.schema.json",
+  "$id": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/rf.telemetry.schema.json",
   "title": "RF telemetry payload",
   "description": "Real RSSI observations from the ESP32 SoftAP monitor. Client identifiers are session-scoped and are not permanent device identities.",
   "type": "object",

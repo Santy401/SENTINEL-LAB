@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentinel-lab.local/schemas/1.0.0/envelope.schema.json",
+  "$id": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/envelope.schema.json",
   "title": "SENTINEL protocol message envelope",
   "description": "Transport-independent envelope shared by every SENTINEL-LAB message. The source, sessionId and sequence tuple is the deduplication key.",
   "type": "object",
@@ -63,63 +63,63 @@
     {
       "properties": {
         "type": { "const": "motion.sample" },
-        "payload": { "$ref": "motion.sample.schema.json" }
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/motion.sample.schema.json" }
       },
       "required": ["type", "payload"]
     },
     {
       "properties": {
         "type": { "const": "motion.status" },
-        "payload": { "$ref": "motion.status.schema.json" }
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/motion.status.schema.json" }
       },
       "required": ["type", "payload"]
     },
     {
       "properties": {
         "type": { "const": "rf.telemetry" },
-        "payload": { "$ref": "rf.telemetry.schema.json" }
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/rf.telemetry.schema.json" }
       },
       "required": ["type", "payload"]
     },
     {
       "properties": {
         "type": { "const": "system.status" },
-        "payload": { "$ref": "system.status.schema.json" }
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/system.status.schema.json" }
       },
       "required": ["type", "payload"]
     },
     {
       "properties": {
         "type": { "const": "event" },
-        "payload": { "$ref": "event.schema.json" }
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/event.schema.json" }
       },
       "required": ["type", "payload"]
     },
     {
       "properties": {
         "type": { "const": "connection.hello" },
-        "payload": { "$ref": "connection.hello.schema.json" }
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/connection.hello.schema.json" }
       },
       "required": ["type", "payload"]
     },
     {
       "properties": {
         "type": { "const": "connection.heartbeat" },
-        "payload": { "$ref": "connection.heartbeat.schema.json" }
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/connection.heartbeat.schema.json" }
       },
       "required": ["type", "payload"]
     },
     {
       "properties": {
         "type": { "const": "connection.goodbye" },
-        "payload": { "$ref": "connection.goodbye.schema.json" }
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/connection.goodbye.schema.json" }
       },
       "required": ["type", "payload"]
     },
     {
       "properties": {
         "type": { "const": "error" },
-        "payload": { "$ref": "error.schema.json" }
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/error.schema.json" }
       },
       "required": ["type", "payload"]
     }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentinel-lab.local/schemas/1.0.0/event.schema.json",
+  "$id": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/event.schema.json",
   "title": "Laboratory event payload",
   "description": "One bound event emitted by firmware, gateway or a client.",
   "type": "object",

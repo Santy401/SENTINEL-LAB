@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentinel-lab.local/schemas/1.0.0/error.schema.json",
+  "$id": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/error.schema.json",
   "title": "Protocol error payload",
   "description": "Machine-readable error. Details must never contain secrets. Error correlation must include the source of the rejected message when a sequence is referenced.",
   "type": "object",
