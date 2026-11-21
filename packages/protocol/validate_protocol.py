@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from datetime import datetime
@@ -82,6 +83,18 @@ def _check_timestamps(value: Any, path: str, errors: list[str]) -> None:
             _check_timestamps(item, f"{path}[{index}]", errors)
 
 
+def _check_finite_numbers(value: Any, path: str, errors: list[str]) -> None:
+    if isinstance(value, float) and not math.isfinite(value):
+        errors.append(f"{path or '<root>'}: non-finite number {value!r}")
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            child = f"{path}.{key}" if path else key
+            _check_finite_numbers(item, child, errors)
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            _check_finite_numbers(item, f"{path}[{index}]", errors)
+
+
 def validate_message(message: Any) -> list[str]:
     errors: list[str] = []
     if not isinstance(message, dict):
@@ -97,6 +110,7 @@ def validate_message(message: Any) -> list[str]:
             f"envelope: {len(encoded)} bytes exceeds limit of {MAX_ENVELOPE_BYTES}"
         )
 
+    _check_finite_numbers(message, "", errors)
     _check_timestamps(message, "", errors)
     for error in VALIDATOR.iter_errors(message):
         location = ".".join(str(part) for part in error.absolute_path) or "<root>"

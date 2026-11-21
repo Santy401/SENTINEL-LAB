@@ -84,6 +84,15 @@ class ProtocolContractTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_json(path)
 
+    def test_validate_message_rejects_non_finite_values(self) -> None:
+        message = load_json(VALID_DIR / "motion.sample.json")
+        for value in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(value=value):
+                candidate = json.loads(json.dumps(message))
+                candidate["payload"]["acceleration"]["x"] = value
+                errors = validate_message(candidate)
+                self.assertTrue(any("non-finite number" in error for error in errors))
+
     def test_duplicate_keys_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "duplicate.json"
