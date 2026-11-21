@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel-lab.local/schemas/1.0.0/rf.telemetry.schema.json",
+  "title": "RF telemetry payload",
+  "description": "Real RSSI observations from the ESP32 SoftAP monitor.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bootId",
+    "firmwareVersion",
+    "channel",
+    "clientCount",
+    "clients",
+    "simulated"
+  ],
+  "properties": {
+    "bootId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
+    },
+    "firmwareVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "channel": { "type": "integer", "minimum": 1, "maximum": 14 },
+    "clientCount": { "type": "integer", "minimum": 0, "maximum": 8 },
+    "clients": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/client" }
+    },
+    "simulated": { "const": false }
+  },
+  "$defs": {
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mac", "rssiDbm", "lastSeen"],
+      "properties": {
+        "mac": {
+          "type": "string",
+          "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+        },
+        "rssiDbm": { "type": "integer", "minimum": -100, "maximum": 0 },
+        "filteredRssiDbm": { "type": "integer", "minimum": -100, "maximum": 0 },
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+        },
+        "estimatedDistance": { "$ref": "#/$defs/distance" }
+      }
+    },
+    "distance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valueM", "calibrated", "method"],
+      "properties": {
+        "valueM": { "type": "number", "minimum": 0, "maximum": 1000 },
+        "calibrated": { "type": "boolean" },
+        "method": { "const": "log-distance" }
+      }
+    }
+  }
+}

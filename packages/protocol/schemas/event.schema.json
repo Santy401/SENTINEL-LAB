@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel-lab.local/schemas/1.0.0/event.schema.json",
+  "title": "Laboratory event payload",
+  "description": "One bound event emitted by firmware, gateway or a client.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "name", "occurredAt", "simulated"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
+    },
+    "name": {
+      "type": "string",
+      "enum": [
+        "MOTION_STATE_CHANGED",
+        "SIGNAL_WEAK",
+        "SIGNAL_RECOVERED",
+        "WIFI_CLIENT_ASSOCIATED",
+        "WIFI_CLIENT_DISCONNECTED",
+        "SYSTEM_HEARTBEAT"
+      ]
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+    },
+    "details": { "$ref": "#/$defs/details" },
+    "simulated": { "const": false }
+  },
+  "$defs": {
+    "details": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "previousState": {
+          "type": "string",
+          "enum": ["STABLE", "MOVEMENT", "ALERT", "SENSOR_OFFLINE"]
+        },
+        "newState": {
+          "type": "string",
+          "enum": ["STABLE", "MOVEMENT", "ALERT", "SENSOR_OFFLINE"]
+        },
+        "rssiDbm": { "type": "integer", "minimum": -100, "maximum": 0 },
+        "mac": {
+          "type": "string",
+          "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+        },
+        "deviceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
+        },
+        "message": { "type": "string", "minLength": 1, "maxLength": 256 }
+      }
+    }
+  }
+}

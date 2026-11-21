@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel-lab.local/schemas/1.0.0/system.status.schema.json",
+  "title": "System status payload",
+  "description": "Runtime state of a SENTINEL-LAB node.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "firmwareVersion",
+    "bootId",
+    "uptimeMs",
+    "operationalState",
+    "transports",
+    "simulated"
+  ],
+  "properties": {
+    "firmwareVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "bootId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
+    },
+    "uptimeMs": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "operationalState": {
+      "type": "string",
+      "enum": ["BOOTING", "IDLE", "MONITORING", "ERROR"]
+    },
+    "transports": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["http", "websocket"] }
+    },
+    "capabilities": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["motion.ingest", "rf.monitor", "laboratory", "webhooks"]
+      }
+    },
+    "freeHeapBytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "simulated": { "const": false }
+  }
+}

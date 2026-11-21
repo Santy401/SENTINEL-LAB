@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel-lab.local/schemas/1.0.0/connection.goodbye.schema.json",
+  "title": "Connection goodbye payload",
+  "description": "Ordered connection teardown with an explicit reason.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["reason"],
+  "properties": {
+    "reason": {
+      "type": "string",
+      "enum": ["shutdown", "reconnect", "timeout", "client-request"]
+    }
+  }
+}
