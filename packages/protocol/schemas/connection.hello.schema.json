@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/connection.hello.schema.json",
+  "title": "Connection hello payload",
+  "description": "First message sent by a peer after a transport is established.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["deviceId", "role", "supportedVersion", "capabilities"],
+  "properties": {
+    "deviceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["firmware", "web", "gateway", "ios", "sensor-client"]
+    },
+    "supportedVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "capabilities": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z0-9][a-z0-9._:-]{0,63}$"
+      }
+    }
+  }
+}

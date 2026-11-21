@@ -1,0 +1,15 @@
+{
+  "protocolVersion": "1.0.0",
+  "type": "error",
+  "timestamp": "2026-11-21T16:10:05.000Z",
+  "sequence": 1047,
+  "source": "gateway",
+  "sessionId": "gw-ubuntu-01",
+  "payload": {
+    "code": "UNSUPPORTED_PROTOCOL_VERSION",
+    "message": "Producer declared protocol version 2.0.0",
+    "retryable": false,
+    "relatedSource": "esp32-s3-rf",
+    "relatedSequence": 1046
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/envelope.schema.json",
+  "title": "SENTINEL protocol message envelope",
+  "description": "Transport-independent envelope shared by every SENTINEL-LAB message. The source, sessionId and sequence tuple is the deduplication key.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocolVersion",
+    "type",
+    "timestamp",
+    "sequence",
+    "source",
+    "sessionId",
+    "payload"
+  ],
+  "properties": {
+    "protocolVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "motion.sample",
+        "motion.status",
+        "rf.telemetry",
+        "system.status",
+        "event",
+        "connection.hello",
+        "connection.heartbeat",
+        "connection.goodbye",
+        "error"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9][a-z0-9._:-]{0,63}$"
+    },
+    "sessionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "type": { "const": "motion.sample" },
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/motion.sample.schema.json" }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "motion.status" },
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/motion.status.schema.json" }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "rf.telemetry" },
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/rf.telemetry.schema.json" }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "system.status" },
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/system.status.schema.json" }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "event" },
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/event.schema.json" }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "connection.hello" },
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/connection.hello.schema.json" }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "connection.heartbeat" },
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/connection.heartbeat.schema.json" }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "connection.goodbye" },
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/connection.goodbye.schema.json" }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "error" },
+        "payload": { "$ref": "https://raw.githubusercontent.com/Santy401/SENTINEL-LAB/main/packages/protocol/schemas/error.schema.json" }
+      },
+      "required": ["type", "payload"]
+    }
+  ]
+}

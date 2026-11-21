@@ -32,6 +32,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Prepare placeholder Wi-Fi config
+        run: cp include/secrets.example.h include/secrets.h
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
