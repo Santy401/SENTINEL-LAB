@@ -196,7 +196,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.save_json:
         payload = {
             "capturedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-            "kit": str(kit),
+            "kit": ".",
             "checks": checks.items,
             "sets": result,
         }
