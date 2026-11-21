@@ -328,6 +328,9 @@ void WebDashboard::handleMotionConfig() {
 void WebDashboard::handleMotionSetup() {
   server.send_P(200, "text/html; charset=utf-8", rf::kMotionSetupHtml);
 }
+#ifdef SENTINEL_REALTIME
+const rf::MotionIngest& realtimeMotionIngest() { return motionIngest; }
+#endif
 #endif
 
 void WebDashboard::handleNotFound() {

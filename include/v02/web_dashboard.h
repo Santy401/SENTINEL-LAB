@@ -3,6 +3,9 @@
 #include "v02/led_indicator.h"
 #include "v02/motion_engine.h"
 #include "v02/wifi_ap.h"
+#ifdef SENTINEL_REALTIME
+#include "rf/motion_ingest.h"
+#endif
 
 namespace sentinel {
 namespace v02 {
@@ -34,6 +37,10 @@ class WebDashboard {
   const WiFiApInfo* wifi_ = nullptr;
   bool simulation_ = false;
 };
+
+#ifdef SENTINEL_REALTIME
+const rf::MotionIngest& realtimeMotionIngest();
+#endif
 
 }  // namespace v02
 }  // namespace sentinel

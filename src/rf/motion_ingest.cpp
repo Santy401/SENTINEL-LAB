@@ -134,6 +134,9 @@ MotionIngestResult MotionIngest::ingest(const char* body, size_t length,
   if ((doc["simulated"].is<bool>() && doc["simulated"].as<bool>()) ||
       (doc["source"].is<const char*>() &&
        std::strcmp(doc["source"].as<const char*>(), "simulated") == 0)) {
+#ifdef SENTINEL_REALTIME
+    ++status_.simulationRejected;
+#endif
     return record(makeResult(
         MotionIngestStatus::InvalidPayload, 400,
         "simulation is not accepted on the native endpoint"));
@@ -186,6 +189,9 @@ MotionIngestResult MotionIngest::ingest(const char* body, size_t length,
   for (JsonVariantConst reading : payload) {
     const char* name = reading["name"] | "";
     if (reading["simulated"].is<bool>() && reading["simulated"].as<bool>()) {
+#ifdef SENTINEL_REALTIME
+      ++status_.simulationRejected;
+#endif
       return record(makeResult(MotionIngestStatus::InvalidPayload, 400,
                                "simulated reading is not accepted"));
     }

@@ -24,6 +24,14 @@ host('test_rf',['test/test_rf.cpp'])
 host('test_rf_monitor',['test/test_rf_monitor.cpp','src/rf/rf_monitor.cpp'],['-Itest/stubs'])
 host('test_event_json',['test/test_event_json.cpp'],['-I.pio/libdeps/sentinel_esp32s3_n16r8_rf/ArduinoJson/src'])
 host('test_motion_ingest',['test/test_motion_ingest.cpp','src/rf/motion_ingest.cpp','src/v02/motion_engine.cpp'],['-I.pio/libdeps/sentinel_esp32s3_n16r8_rf/ArduinoJson/src'])
+ARDUINOJSON=['-I.pio/libdeps/sentinel_esp32s3_n16r8_rf/ArduinoJson/src']
+host('test_frame_codec',['test/test_frame_codec.cpp','src/realtime/frame_codec.cpp'])
+host('test_time_source',['test/test_time_source.cpp','src/realtime/time_source.cpp'])
+host('test_realtime_limits',['test/test_realtime_limits.cpp','src/realtime/auth.cpp'])
+host('test_handshake',['test/test_handshake.cpp','src/realtime/handshake.cpp'])
+host('test_protocol_adapter',['test/test_protocol_adapter.cpp','src/realtime/protocol_adapter.cpp','src/realtime/time_source.cpp'],ARDUINOJSON)
+host('test_session',['test/test_session.cpp','src/realtime/session.cpp','src/realtime/protocol_adapter.cpp','src/realtime/time_source.cpp'],ARDUINOJSON)
+host('test_ws_server',['test/test_ws_server.cpp','src/realtime/ws_server.cpp','src/realtime/auth.cpp','src/realtime/frame_codec.cpp','src/realtime/handshake.cpp','src/realtime/protocol_adapter.cpp','src/realtime/session.cpp','src/realtime/time_source.cpp'],['-Itest/stubs']+ARDUINOJSON)
 for path in ['src/v02/dashboard_html.h','src/rf/dashboard_html.h','src/rf/capture_html.h','src/rf/motion_setup_html.h']:
     text=Path(path).read_text()
     # Firefox iOS shows this native toast on shake-to-summarize; it must never be

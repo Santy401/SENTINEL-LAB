@@ -203,4 +203,12 @@ void registerRoutes(WebServer& server) {
     http->sendContent("");
   });
 }
+
+#ifdef SENTINEL_REALTIME
+const RfMonitor& realtimeMonitor() { return monitor; }
+const EventEngine& realtimeEvents() { return eventEngine; }
+const Laboratory& realtimeLaboratory() { return lab; }
+const char* realtimeBootId() { return bootId; }
+uint32_t realtimeLastQueuedEvent() { return lastQueued; }
+#endif
 } }
