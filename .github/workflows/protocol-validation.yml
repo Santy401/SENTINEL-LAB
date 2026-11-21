@@ -6,12 +6,22 @@ on:
       - "packages/protocol/**"
       - "docs/protocol-contract.md"
       - "docs/decisions/ADR-0004-protocolo-v1.md"
+      - "docs/rf-protocol.md"
+      - "docs/architecture/overview.md"
+      - "src/**"
+      - "include/**"
+      - "platformio.ini"
       - ".github/workflows/protocol-validation.yml"
   pull_request:
     paths:
       - "packages/protocol/**"
       - "docs/protocol-contract.md"
       - "docs/decisions/ADR-0004-protocolo-v1.md"
+      - "docs/rf-protocol.md"
+      - "docs/architecture/overview.md"
+      - "src/**"
+      - "include/**"
+      - "platformio.ini"
       - ".github/workflows/protocol-validation.yml"
   workflow_dispatch:
 
@@ -33,12 +43,8 @@ jobs:
       - name: Validate valid examples
         run: python3 packages/protocol/validate_protocol.py packages/protocol/examples/valid
 
-      - name: Ensure invalid examples are rejected
-        run: |
-          if python3 packages/protocol/validate_protocol.py packages/protocol/examples/invalid; then
-            echo "An invalid protocol example was accepted" >&2
-            exit 1
-          fi
+      - name: Ensure every invalid example is rejected
+        run: python3 packages/protocol/validate_protocol.py --expect-invalid packages/protocol/examples/invalid
 
       - name: Run protocol tests
         run: python3 -m unittest discover -s packages/protocol/tests -v

@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+import io
 import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from jsonschema import FormatChecker
@@ -19,6 +21,7 @@ from validate_protocol import (  # noqa: E402
     MAX_ENVELOPE_BYTES,
     SCHEMA_DIR,
     load_json,
+    main,
     validate_file,
     validate_message,
 )
@@ -114,6 +117,20 @@ class ProtocolContractTests(unittest.TestCase):
             path.write_text('{"sequence": 1, "sequence": 2}', encoding="utf-8")
             with self.assertRaises(ValueError):
                 load_json(path)
+
+    def test_schema_errors_do_not_echo_payloads(self) -> None:
+        errors = validate_file(INVALID_DIR / "zero-rssi.json")
+        self.assertTrue(errors)
+        self.assertFalse(any("'rssiDbm': 0" in error for error in errors))
+
+    def test_expect_invalid_mode(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            invalid_status = main(["--expect-invalid", str(INVALID_DIR)])
+            valid_status = main(["--expect-invalid", str(VALID_DIR)])
+        self.assertEqual(invalid_status, 0)
+        self.assertEqual(valid_status, 1)
+        self.assertIn("expected invalid", output.getvalue())
 
     def test_schema_ids_are_resolvable(self) -> None:
         schemas = {path.name: load_json(path) for path in SCHEMA_DIR.glob("*.schema.json")}

@@ -96,6 +96,13 @@ def _check_finite_numbers(value: Any, path: str, errors: list[str]) -> None:
             _check_finite_numbers(item, f"{path}[{index}]", errors)
 
 
+def _format_schema_error(error: Any) -> str:
+    location = ".".join(str(part) for part in error.absolute_path) or "<root>"
+    if error.validator == "oneOf":
+        return f"{location}: does not match the payload schema for the declared type"
+    return f"{location}: {error.message}"
+
+
 def validate_message(message: Any) -> list[str]:
     errors: list[str] = []
     if not isinstance(message, dict):
@@ -130,8 +137,7 @@ def validate_message(message: Any) -> list[str]:
     _check_finite_numbers(message, "", errors)
     _check_timestamps(message, "", errors)
     for error in VALIDATOR.iter_errors(message):
-        location = ".".join(str(part) for part in error.absolute_path) or "<root>"
-        errors.append(f"{location}: {error.message}")
+        errors.append(_format_schema_error(error))
     return errors
 
 
@@ -152,6 +158,11 @@ def _iter_json_files(path: Path) -> list[Path]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paths", nargs="+", type=Path, help="JSON files or directories")
+    parser.add_argument(
+        "--expect-invalid",
+        action="store_true",
+        help="succeed only when every input file is rejected",
+    )
     args = parser.parse_args(argv)
 
     failures = 0
@@ -167,6 +178,13 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"  - {error}")
             else:
                 print(f"OK   {path}")
+
+    if args.expect_invalid:
+        accepted = checked - failures
+        print(
+            f"Protocol validation: {accepted} valid, {failures} invalid (expected invalid)"
+        )
+        return 0 if checked and accepted == 0 else 1
 
     print(f"Protocol validation: {checked - failures} valid, {failures} invalid")
     return 1 if failures else 0
