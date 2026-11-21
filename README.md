@@ -64,7 +64,7 @@ Real-time WebSocket telemetry, a redesigned web interface, gateway services, and
 - [x] Embedded firmware and sensor monitoring
 - [x] HTTP API and initial dashboard
 - [x] Motion ingestion and RF experiments
-- [ ] Versioned real-time telemetry protocol
+- [x] Versioned protocol contract (runtime adapters pending)
 - [ ] Next-generation web dashboard
 - [ ] Gateway and automation integration
 - [ ] Native application development

@@ -79,7 +79,9 @@ administrativos no públicos.
 ## Protocolo compartido
 
 El contrato v1.0.0 define un sobre JSON versionado y transport-independent para
-movimiento, RF, estado, eventos, ciclo de conexión y errores. Es la base de los
+movimiento, RF, estado, eventos, ciclo de conexión y errores. La terna
+`source` + `sessionId` + `sequence` identifica cada mensaje; los clientes RF se
+representan con `clientId` por sesión y nunca con MAC. Es la base de los
 adaptadores futuros; no sustituye la API HTTP v0.3.1. Ver
 [contrato](../protocol-contract.md) y
 [ADR-0004](../decisions/ADR-0004-protocolo-v1.md).

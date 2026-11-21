@@ -10,17 +10,28 @@ un archivo de evidencia.
 Estado real:
 
 - **Implemented**: esquemas, validador, ejemplos y pruebas automáticas.
+- **Software tested**: 17 pruebas de contrato, 9 ejemplos válidos y 16 casos
+  negativos ejecutados en GitHub Actions.
 - **Planned**: adaptadores en firmware, web, gateway e iOS.
-- Este trabajo **no modifica** el firmware v0.3.1 ni sus endpoints HTTP.
+- **Hardware tested**: no. Este trabajo **no modifica** el firmware v0.3.1 ni
+  sus endpoints HTTP.
 
 ## 2. Principios
 
 - Toda medición publicada es real; los mensajes de medición exigen
   `simulated: false`.
+- Un estado con fuente simulada no se publica como `motion.status` de v1; la
+  simulación queda fuera de la superficie de medición del contrato.
 - El sobre es estricto: no se aceptan campos desconocidos.
-- Los esquemas son la fuente de verdad de la forma de cada mensaje.
-- La versión del protocolo se declara en cada mensaje.
-- Los errores son legibles por máquina y no contienen secretos.
+- Los esquemas son la fuente de verdad de la forma de cada mensaje y tienen
+  identificadores HTTPS resolubles.
+- La versión del protocolo se declara en cada mensaje; `connection.hello` además
+  declara la versión que soporta y debe coincidir con el sobre.
+- Los errores son legibles por máquina, no contienen secretos y asocian la
+  respuesta con el `source` del mensaje rechazado.
+- No se publica MAC como identidad de dispositivo. `clientId` es secuencial por
+  arranque y asociación; `bootId` distingue reinicios. No se inventan nombres de
+  dispositivo ni se afirma descubrir equipos fuera del AP del ESP32.
 - RSSI no determina una distancia exacta; `estimatedDistance` es una estimación
   condicionada a calibración física.
 
@@ -33,12 +44,16 @@ Todo mensaje contiene exactamente estos campos:
 | `protocolVersion` | string | SemVer `MAJOR.MINOR.PATCH`; en v1 debe ser `1.0.0` |
 | `type` | string | Tipo de mensaje del registro cerrado |
 | `timestamp` | string | ISO 8601 UTC con `Z`; milisegundos opcionales |
-| `sequence` | integer | Monótono por `source`, de `0` a `2^53 - 1` |
+| `sequence` | integer | Monótono dentro de una sesión, de `0` a `2^53 - 1` |
 | `source` | string | Identificador del emisor, 1–64 caracteres |
+| `sessionId` | string | Identificador de sesión del emisor, 1–64 caracteres |
 | `payload` | object | Contenido validado según `type` |
 
-El par `source` + `sequence` permite deduplicación y detección de pérdida de
-mensajes sin depender del transporte.
+La terna `source` + `sessionId` + `sequence` permite deduplicación y detección
+de pérdida de mensajes sin depender del transporte. `sessionId` cambia al
+reiniciar el productor o al restablecer una conexión; evita colisiones cuando
+`sequence` vuelve a cero. El validador comprueba la forma de la terna; el
+seguimiento de monotonía es estadoful y pertenece a los adaptadores de P2.
 
 ## 4. Tipos de mensaje
 
@@ -56,36 +71,58 @@ mensajes sin depender del transporte.
 
 Los tipos `motion.*` conservan la semántica de `NativeClient`, `SensorLogger` y
 los estados `STABLE`, `MOVEMENT`, `ALERT` y `SENSOR_OFFLINE` ya presentes en el
-firmware.
+firmware. `motion.status` no acepta `sourceType: "Simulated"`.
+
+El enum de `event.name` replica los nombres emitidos por `EventEngine`:
+`DEVICE_CONNECTED`, `DEVICE_DISCONNECTED`, `SIGNAL_WEAK`, `SIGNAL_RECOVERED`,
+`COVERAGE_LIMIT_REACHED`, `MOVEMENT_DETECTED`, `MOTION_ALERT`, `SENSOR_OFFLINE`,
+`SENSOR_RECOVERED` y `HEARTBEAT`. Los eventos incluyen `clientId`, nunca MAC.
 
 ## 5. Validación
 
-Los esquemas usan JSON Schema Draft 2020-12. La validación canónica incluye:
+Los esquemas usan JSON Schema Draft 2020-12 y publican `$id` HTTPS bajo la ruta
+del repositorio. `validate_protocol.build_registry()` expone el registro local
+para consumidores que trabajen sin red. La validación canónica incluye:
 
 - `additionalProperties: false` en sobre y payloads.
-- `required` explícito por tipo de mensaje.
-- Enums cerrados para tipos, estados, roles y códigos de error.
-- Rangos numéricos y límites de longitud.
-- Timestamps UTC con forma y fecha válidas.
-- Rechazo de `NaN`, `Infinity` y claves duplicadas antes de JSON Schema.
-- Límite de tamaño del sobre serialized.
+- `required` explícito por tipo de mensaje y `$ref` absolutos resueltos.
+- Enums cerrados para tipos, estados, roles, eventos y códigos de error.
+- Rangos numéricos, longitudes y coherencia de `clientCount` con `clients`.
+- Timestamps UTC con forma y fecha válidas mediante `rfc3339-validator`.
+- Rechazo de `NaN`, `Infinity` y claves duplicadas tanto al cargar JSON como al
+  llamar directamente a `validate_message()`.
+- Comprobación cruzada de `connection.hello.supportedVersion`.
+- Límite de tamaño del sobre serializado y mensajes de error sin volcados del
+  payload.
 
 ### Límites principales
 
 | Elemento | Límite |
 |---|---|
-| Sobre serializado | 16 KiB |
+| Sobre serializado | 16 KiB en UTF-8 compacto |
 | `sequence` | `0` a `9007199254740991` |
-| `deviceId`, `bootId`, `source`, `eventId` | 1–64 caracteres |
+| `deviceId`, `bootId`, `source`, `sessionId`, `eventId` | 1–64 caracteres |
 | Clientes RF por mensaje | 8 |
 | Capacidades por saludo | 16 |
 | Vector de movimiento | `-500` a `500` m/s² por eje |
-| RSSI | `-100` a `0` dBm |
+| RSSI | `-100` a `-1` dBm o `null` si no hay lectura |
+| Distancia estimada | `0` a `10000` m |
 | Canal Wi-Fi | `1` a `14` |
 | Mensaje de error | 1–256 caracteres |
 
-La dependencia `jsonschema` existe solo en la herramienta de validación. El
-firmware no la utiliza y no se le exige ninguna biblioteca nueva.
+Las dependencias `jsonschema` y `rfc3339-validator` existen solo en la
+herramienta de validación. El firmware no las utiliza y no se le exige ninguna
+biblioteca nueva.
+
+### Implicaciones de memoria
+
+El límite de 16 KiB se define sobre bytes de transporte canónicos, no sobre el
+objeto en memoria. Un gateway debe rechazar el mensaje mientras lee el frame o
+el cuerpo HTTP, antes de construir un objeto completo. En el ESP32, P2 deberá
+usar buffers acotados, colas limitadas y retroceso explícito; no debe reservar
+un buffer de 16 KiB por cliente ni por mensaje. El heap pico, la latencia y el
+comportamiento bajo carga real son criterios de salida de P2 y no están medidos
+en P1.
 
 ### Comandos
 
@@ -95,11 +132,13 @@ python3 -m venv .venv
 pip install -r packages/protocol/requirements.txt
 
 python3 packages/protocol/validate_protocol.py packages/protocol/examples/valid
+python3 packages/protocol/validate_protocol.py --expect-invalid packages/protocol/examples/invalid
 python3 -m unittest discover -s packages/protocol/tests -v
 ```
 
 El workflow `.github/workflows/protocol-validation.yml` ejecuta los mismos
-controles en GitHub Actions.
+controles en GitHub Actions y también se dispara ante cambios en firmware que
+puedan afectar la compatibilidad.
 
 ## 6. Versionado
 
@@ -112,10 +151,11 @@ Reglas de interoperabilidad:
 
 1. Cada mensaje declara exactamente la versión que respeta su productor.
 2. El validador canónico acepta solo la versión que declara soportar.
-3. Un consumidor que no soporta la versión debe responder
+3. `connection.hello.supportedVersion` debe coincidir con `protocolVersion`.
+4. Un consumidor que no soporta la versión debe responder
    `UNSUPPORTED_PROTOCOL_VERSION`.
-4. No se aceptan campos extra «por tolerancia» en validación canónica.
-5. Toda versión nueva publica su propio conjunto de esquemas versionado.
+5. No se aceptan campos extra «por tolerancia» en validación canónica.
+6. Toda versión nueva publica su propio conjunto de esquemas versionado.
 
 Esto evita interpretaciones ambiguas entre HTTP, WebSocket y registro histórico.
 
@@ -131,8 +171,9 @@ Esto evita interpretaciones ambiguas entre HTTP, WebSocket y registro histórico
 | `UNAUTHORIZED` | Dispositivo o par no autorizado | No |
 | `INTERNAL_ERROR` | Fallo interno del receptor | Sí |
 
-El campo `relatedSequence` permite asociar el error con un mensaje recibido sin
-incluir credenciales ni datos privados.
+El error incluye `relatedSource` y `relatedSequence` para identificar el mensaje
+rechazado sin incluir credenciales ni datos privados. Los mensajes del
+validador no devuelven el payload completo.
 
 ## 8. Compatibilidad con firmware v0.3.1
 
@@ -143,20 +184,25 @@ el firmware ya emita estos mensajes**.
 | Superficie v0.3.1 | Mensaje v1 correspondiente | Garantía en P1 |
 |---|---|---|
 | `POST /api/motion/sensorlogger` | `motion.sample` | Mismo emparejamiento aceleración + gravedad y rechazo de simulación |
-| `GET /api/motion/status` | `motion.status` | Mismos conceptos: `deviceId`, `acceptedSamples`, `signalLost` |
+| `GET /api/motion/status` | `motion.status` | Mismos conceptos; la fuente simulada se excluye de v1 |
 | `GET /api/state` | `system.status` | Estado operativo y capacidades sin cambiar la ruta |
-| `GET /api/rf` | `rf.telemetry` | RSSI crudo y filtrado diferenciados; distancia opcional |
-| `GET /api/events` | `event` | Un sobre por evento del anillo acotado |
+| `GET /api/rf` | `rf.telemetry` | `clientId` por sesión, RSSI crudo y filtrado, `null` si no hay lectura |
+| `GET /api/events` | `event` | Un sobre por evento del anillo acotado; nombres alineados con `EventEngine` |
 | `GET /motion/native` | Sin cambio | La autorización de `deviceId` sigue en la UI actual |
 | `GET /api/export.csv` | Sin cambio | La exportación CSV no se sustituye |
 | `POST /api/experiments`, `/api/measurements`, `/api/calibration` | Fuera de v1 | Operaciones del laboratorio, no telemetría |
+
+`clientId` es secuencial por arranque y asociación, y `bootId` distingue
+reinicios. No es una dirección MAC ni una identidad permanente. El protocolo no
+admite `mac` en RF ni en eventos; el firmware v0.3.1 ya evita publicarla.
 
 Garantías concretas de esta etapa:
 
 - No se renombró, movió ni eliminó ningún archivo de `src/` o `include/`.
 - No se cambió `platformio.ini`.
 - No se flasheó hardware.
-- Los cuatro entornos PlatformIO siguen compilando.
+- Los cuatro entornos PlatformIO siguen compilando y el binario RF conserva su
+  SHA256 original.
 - La compatibilidad está documentada y es estructural; la compatibilidad en
   ejecución se verificará en P2 con adaptadores y pruebas.
 
@@ -176,6 +222,7 @@ transporte protegido.
 
 - Todavía no existe un adaptador que produzca estos mensajes desde el firmware.
 - La estimación de distancia depende de calibración física real.
-- `COVERAGE_LIMIT_REACHED` sigue reservado y no forma parte del enum de v1.
+- El seguimiento de monotonía de `sequence` requiere estado en cada sesión.
 - El historial RAM-only y la exportación CSV no se sustituyen en P1.
-- La latencia y el pico de heap con la nueva capa no están medidos.
+- La latencia, el pico de heap y el tamaño máximo de cola en el ESP32 son
+  mediciones obligatorias de P2.
