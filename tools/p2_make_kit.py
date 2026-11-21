@@ -214,6 +214,17 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
 
+    layout_evidence = evidence_root / "checksums" / "flash-layout.json"
+    layout = subprocess.run(
+        [sys.executable, str(destination / "tools" / "p2_layout_check.py"),
+         "--kit", str(destination), "--save-json", str(layout_evidence)],
+        capture_output=True, text=True, check=False, timeout=60,
+    )
+    if layout.returncode != 0 or not layout_evidence.is_file():
+        print(f"FAIL: layout verification failed: {layout.stdout}\n{layout.stderr}", file=sys.stderr)
+        return 2
+    print("Layout verificado: 21 PASS, 0 FAIL")
+
     commit = command_text(["git", "-C", str(REPO), "rev-parse", "HEAD"])
     sizes = parse_build_log(build_log)
     build_record = {
