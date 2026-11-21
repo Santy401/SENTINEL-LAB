@@ -19,6 +19,15 @@ SemVer cuando exista una release oficial.
   e informe `docs/validation/p2-software.md`.
 - Pruebas host del codec, reloj, colas, autenticación, handshake, adaptador,
   sesiones y ciclo de vida del servidor WebSocket.
+- Kit reproducible de evidencia física P2: `tools/hw_common.py` (UTC, hashes,
+  redacción, HTTP, Wi-Fi pasivo y WebSocket RFC 6455 mínimo),
+  `tools/hw_capture.py` (fases, marcadores y manifiesto) y
+  `tools/hw_report.py` (verificación e informe `INFORME.md`).
+- Guías operatorias `docs/validation/p2-hardware.md` y
+  `docs/hardware/recovery.md` con preflight, capturas, informe, flasheo
+  autorizado, rollback y reglas anti-fabricación.
+- Documentación del contrato de 13 campos de `GET /api/realtime/status`, solo
+  presente en el entorno `_realtime`.
 
 ### Changed
 
@@ -28,6 +37,13 @@ SemVer cuando exista una release oficial.
 - RF y eventos usan `clientId` por sesión sin publicar MAC ni inventar nombres.
 - El contrato documenta el adaptador de firmware como implementado y probado en
   software; la web, el gateway y la app iOS siguen pendientes.
+- La documentación del handshake refleja que el firmware valida la ruta exacta,
+  los tokens `Upgrade`/`Connection`, la clave base64 canónica,
+  `Sec-WebSocket-Version: 13` y el token `sentinel.v1`, con respuesta `426` para
+  otras versiones; aclara que el reloj se sincroniza con el campo de sobre
+  `timestamp`, no con un campo `epochMs`.
+- Arquitectura y contrato reflejan el kit P2 y mantienen el estado de hardware
+  como `untested` hasta un informe PASS sobre captura real.
 
 ### Fixed
 
@@ -55,14 +71,19 @@ SemVer cuando exista una release oficial.
   el reloj por WebSocket. La plantilla pública no contiene credenciales.
 - El firmware no inventa timestamps UTC: no emite sobres v1 hasta obtener una
   fecha válida de NTP local o de un gateway autenticado.
+- El kit P2 lee el token solo desde `SENTINEL_HW_BEARER`, registra únicamente
+  `token_present`, nunca imprime ni persiste `Authorization`, y excluye fixtures
+  y payloads simulados de la evidencia.
 
 ### Validation
 
-- 14 programas host, 18 pruebas de contrato, 9 ejemplos válidos, 16 casos
+- 17 programas host, 18 pruebas de contrato, 9 ejemplos válidos, 16 casos
   negativos y 8 fixtures del firmware validados.
 - Los cinco entornos PlatformIO compilan; RAM y flash estáticas se registran en
   `docs/validation/p2-software.md`.
 - Sin pruebas de placa, heap en ejecución ni radio.
+- Kit P2: `py_compile` de los tres módulos y `hw_report.py --help` ejecutados en
+  host; no se capturó hardware ni se generó un informe PASS real.
 
 ## v0.3.1
 

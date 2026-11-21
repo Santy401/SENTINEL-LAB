@@ -32,9 +32,13 @@ include/rf/connected.h
 # Python
 __pycache__/
 *.py[cod]
+.venv*/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local hardware evidence
+evidence/
 
 # Node and frontend build output
 node_modules/

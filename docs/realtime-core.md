@@ -19,11 +19,40 @@ Este entorno extiende `_rf`, añade `src/realtime/*` y define
 | Transporte | Puerto | Ruta | Estado |
 |---|---:|---|---|
 | HTTP v0.3.1 | 80 | `/api/rf`, `/api/lab`, `/api/events`, etc. | Sin cambios |
+| HTTP de salud | 80 | `/api/realtime/status` | Nueva, solo en `_realtime` |
 | WebSocket | 81 | `/realtime` | Nuevo en v0.4.0 |
 
 El endpoint solo escucha en el AP local de laboratorio. El handshake exige
-`Upgrade: websocket`, `Connection: Upgrade` y `Sec-WebSocket-Key`. El
-subprotocolo anunciado es `sentinel.v1`.
+`Upgrade: websocket`, `Connection: Upgrade`, `Sec-WebSocket-Key`,
+`Sec-WebSocket-Version: 13` y `Sec-WebSocket-Protocol: sentinel.v1`. La
+respuesta `101` devuelve `Sec-WebSocket-Accept` calculado sobre la clave y
+`Sec-WebSocket-Protocol: sentinel.v1`. Un cliente debe verificar ambos valores;
+no basta con recibir `101`.
+
+### Ruta de salud de ejecución
+
+`GET /api/realtime/status` existe únicamente en el entorno `_realtime` y no
+requiere token. Devuelve exactamente estos campos:
+
+| Campo | Tipo | Uso |
+|---|---|---|
+| `fw` | string | Versión del firmware HTTP v0.3.1 |
+| `realtimeVersion` | string | Versión del núcleo en tiempo real |
+| `bootId` | string | Identificador del arranque observado |
+| `uptimeMs` | integer | Milisegundos monotónicos desde el arranque |
+| `clockSynced` | boolean | Si existe una fuente UTC válida |
+| `clientCount` | integer | Pares WebSocket activos |
+| `freeHeapBytes` | integer | Heap libre observado |
+| `minFreeHeapBytes` | integer | Mínimo de heap libre muestreado |
+| `heapSamples` | integer | Número de muestras de heap |
+| `droppedFrames` | integer | Tramas descartadas por retroceso |
+| `rejectedMessages` | integer | Mensajes entrantes rechazados |
+| `droppedTelemetry` | integer | Sobres v1 no publicados |
+| `skippedSimulatedEvents` | integer | Eventos simulados omitidos |
+
+Estos valores son observaciones de ejecución. No sustituyen la medición de heap
+en placa: la puerta `runtime.heap_and_stability` del kit P2 los evalúa sobre
+evidencia capturada.
 
 ## Reloj y arranque
 
@@ -38,6 +67,13 @@ proporcione una fecha válida:
 2. Un cliente que se identifique como `gateway` en `connection.hello`, con
    `Authorization: Bearer <token>` en el handshake. El timestamp de ese saludo
    sincroniza el reloj; el firmware no acepta un saludo `gateway` sin token.
+
+El campo del sobre que aporta la fecha es **`timestamp`** (ISO 8601 UTC con
+`Z`), no `epochMs`. `InboundValidator::validate()` parsea `timestamp` con
+`UtcClock::parse()` y guarda internamente el valor como `epochMs`; el esquema
+`connection.hello.schema.json` prohíbe campos adicionales, por lo que añadir
+`epochMs` al sobre lo invalidaría. El kit de hardware registra `hostEpochMs`
+solo en su evidencia local para auditar la marca enviada.
 
 El token se define como `SENTINEL_REALTIME_BEARER_TOKEN` en `include/secrets.h`.
 La plantilla `include/secrets.example.h` lo deja vacío: con token vacío nadie
@@ -143,14 +179,26 @@ Después de `101 Switching Protocols`, un `gateway` debe enviar:
 La secuencia entrante debe aumentar. Un saludo `gateway` sin token válido se
 responde con `UNAUTHORIZED`; no modifica el reloj. Los roles `web`,
 `sensor-client` e `ios` no requieren token pero tampoco pueden sincronizarlo.
+El firmware valida la línea de petición exacta, los tokens `websocket` y
+`upgrade`, una clave base64 canónica de 16 bytes, `Sec-WebSocket-Version: 13` y
+el token exacto `sentinel.v1` en `Sec-WebSocket-Protocol`. Una petición con otra
+versión recibe `426 Upgrade Required`; una petición incompleta recibe `400`. No
+se negocian subprotocolos alternativos: solo se anuncia `sentinel.v1`. El kit
+`tools/hw_capture.py` envía y comprueba ambos campos en la respuesta.
 
 ## Verificación
 
 ```bash
+python3 -m py_compile tools/hw_common.py tools/hw_capture.py tools/hw_report.py
 python3 tools/check_software.py
+python3 scripts/check-repository.py
 python3 packages/protocol/validate_protocol.py build/firmware-*.json
 pio run -e sentinel_esp32s3_n16r8_realtime
+python3 tools/hw_report.py --help
 ```
 
 Los resultados concretos y el tamaño del binario se registran en
-`docs/validation/p2-software.md`.
+`docs/validation/p2-software.md`. La secuencia completa de evidencia física, sus
+puertas de aceptación y las advertencias de flasheo están en
+`docs/validation/p2-hardware.md`. **No hay validación de hardware hasta que ese
+informe devuelva PASS sobre evidencia real.**

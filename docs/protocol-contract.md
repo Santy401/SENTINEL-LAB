@@ -12,10 +12,16 @@ Estado real:
 - **Implemented**: esquemas, validador, ejemplos, pruebas automáticas y
   adaptador en el firmware v0.4.0.
 - **Software tested**: 18 pruebas de contrato, 9 ejemplos válidos, 16 casos
-  negativos, 8 fixtures generados por el firmware y 14 programas host.
+  negativos, 8 fixtures generados por el firmware y 17 programas host.
 - **Planned**: adaptadores en web, gateway e iOS.
 - **Hardware tested**: no. La imagen v0.3.1 y sus endpoints HTTP no cambian;
   el transporte WebSocket existe solo en el entorno experimental `_realtime`.
+  Existe un kit de evidencia física, pero no hay captura real ni informe P2 en
+  PASS: el estado sigue siendo `hardware untested`.
+- `GET /api/realtime/status` es una ruta de salud HTTP del build `_realtime`,
+  **no un sobre v1**; su contrato de 13 campos se documenta en
+  [realtime-core](../realtime-core.md) y se evalúa en la guía
+  [P2 hardware](validation/p2-hardware.md).
 
 ## 2. Principios
 
@@ -142,6 +148,22 @@ El workflow `.github/workflows/protocol-validation.yml` ejecuta los mismos
 controles en GitHub Actions y también se dispara ante cambios en firmware que
 puedan afectar la compatibilidad.
 
+### Reloj y evidencia de hardware
+
+El sobre v1 exige `timestamp` en UTC civil válido. El firmware solo conoce un
+contador monotónico (`millis()`), por lo que no emite sobres hasta recibir una fecha de NTP
+local o de un `gateway` autorizado. En el saludo `gateway`, la fecha viaja en el
+campo **`timestamp`** del sobre: `InboundValidator` la parsea con `UtcClock` y
+la guarda internamente como `epochMs`. `epochMs` **no es un campo del sobre** y
+no debe añadirse: `connection.hello.schema.json` prohíbe propiedades
+adicionales. El kit P2 registra `hostEpochMs` únicamente en su evidencia local
+para cotejar la marca enviada.
+
+La captura y el informe están descritos en
+[validación física P2](validation/p2-hardware.md). El informador rechaza
+evidencia sin manifiesto íntegro, marca `NOT_VERIFIED` lo que falta y solo puede
+declarar hardware validado si todas las puertas están en PASS.
+
 ## 6. Versionado
 
 - **MAJOR**: cambio incompatible del sobre o de un payload existente.
@@ -216,9 +238,18 @@ Garantías concretas de P2:
 - **HTTP**: un sobre por petición o respuesta; el código HTTP transporta el
   resultado, el payload `error` transporta el detalle.
 - **WebSocket**: un sobre por frame de texto en `ws://<AP-IP>:81/realtime`;
-  `hello` y `heartbeat` son mensajes de control, no telemetría. El endpoint está
-  acotado a la red local y se documenta en `docs/realtime-core.md`.
-- **Sin transporte**: el mismo JSON es válido como evidencia archivada.
+  `hello` y `heartbeat` son mensajes de control, no telemetría. El handshake del
+  cliente debe incluir `Upgrade: websocket`, `Connection: Upgrade`,
+  `Sec-WebSocket-Key`, `Sec-WebSocket-Version: 13` y
+  `Sec-WebSocket-Protocol: sentinel.v1`; la respuesta `101` debe traer un
+  `Sec-WebSocket-Accept` válido y anunciar `sentinel.v1`. El firmware valida la
+  versión 13 y el token exacto `sentinel.v1`, responde `426` a otras versiones y
+  no negocia alternativas. El endpoint está acotado a la red local y se documenta
+  en `docs/realtime-core.md`.
+- **Sin transporte**: el mismo JSON es válido como evidencia archivada, siempre
+  que no proceda de `build/firmware-*.json`, de
+  `packages/protocol/examples/**` ni de un payload con `simulated=true`,
+  `simulation=true`, `sourceType: "Simulated"` o `source: "Simulated"`.
 
 El contrato no asume TLS, autenticación ni topología. Esas decisiones pertenecen
 al despliegue: HTTP local solo en la red de laboratorio; gateway remoto con
@@ -226,9 +257,16 @@ transporte protegido.
 
 ## 10. Riesgos pendientes
 
-- Todavía no existe un adaptador que produzca estos mensajes desde el firmware.
-- La estimación de distancia depende de calibración física real.
+- El adaptador de firmware existe y está probado en software; los adaptadores
+  de web, gateway e iOS siguen pendientes.
+- La estimación de distancia depende de calibración física real; RSSI no es
+  distancia.
 - El seguimiento de monotonía de `sequence` requiere estado en cada sesión.
 - El historial RAM-only y la exportación CSV no se sustituyen en P1.
-- La latencia, el pico de heap y el tamaño máximo de cola en el ESP32 son
-  mediciones obligatorias de P2.
+- La latencia, el pico de heap y el tamaño máximo de cola en el ESP32 siguen sin
+  medir. El kit P2 proporciona las puertas para medirlos sobre hardware, pero
+  no hay informe PASS; la ruta de salud no sustituye una medición real.
+- El servidor solo admite `Sec-WebSocket-Version: 13` y el token exacto
+  `sentinel.v1`; no negocia alternativas. El kit verifica lo que devuelve el
+  servidor, pero la interoperabilidad con otros clientes sigue pendiente de
+  prueba en placa.
