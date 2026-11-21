@@ -26,13 +26,18 @@ class RealtimeCore {
   uint32_t droppedTelemetry() const { return droppedTelemetry_; }
   uint32_t skippedSimulatedEvents() const { return skippedSimulatedEvents_; }
   bool clockSynced() const { return clock_.synced(); }
+  uint32_t freeHeapBytes() const { return freeHeapBytes_; }
+  uint32_t minFreeHeapBytes() const { return minFreeHeapBytes_; }
+  uint32_t heapSamples() const { return heapSamples_; }
 
  private:
   static constexpr uint32_t kRfIntervalMs = 1000;
   static constexpr uint32_t kHeartbeatIntervalMs = 5000;
   static constexpr uint32_t kEventPollIntervalMs = 100;
   static constexpr uint32_t kNtpRetryMs = 5000;
+  static constexpr uint32_t kHeapSampleIntervalMs = 15000;
 
+  void sampleHeap(uint32_t nowMs);
   void tryNtpSync(uint32_t nowMs);
   void publishRf(uint32_t nowMs);
   void publishSystem(uint32_t nowMs);
@@ -51,6 +56,10 @@ class RealtimeCore {
   uint32_t lastMotion_ = 0;
   uint32_t lastEventPoll_ = 0;
   uint32_t lastNtpCheck_ = 0;
+  uint32_t lastHeapSample_ = 0;
+  uint32_t freeHeapBytes_ = 0;
+  uint32_t minFreeHeapBytes_ = 0;
+  uint32_t heapSamples_ = 0;
   bool eventBridgeStarted_ = false;
   uint32_t droppedTelemetry_ = 0;
   uint32_t skippedSimulatedEvents_ = 0;

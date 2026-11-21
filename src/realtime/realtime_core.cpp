@@ -1,6 +1,7 @@
 #include "realtime/realtime_core.h"
 
 #include "realtime/firmware_bridge.h"
+#include "realtime/realtime_health.h"
 #include "realtime/status_policy.h"
 
 #include <Arduino.h>
@@ -18,6 +19,10 @@
 namespace sentinel {
 namespace realtime {
 namespace {
+
+// Set once the P2 core is initialized; the health snapshot is invalid before
+// that point. It is never cleared because begin() happens once per boot.
+RealtimeCore* activeCore = nullptr;
 
 bool relevantEvent(rf::EventType type) {
   switch (type) {
@@ -39,6 +44,13 @@ void RealtimeCore::begin(uint16_t port, const char* bootId,
   snprintf(bootId_, sizeof(bootId_), "%s", id);
   systemSession_.begin(0, bootId_, true);
 
+  // The first heap reading is a sample too, so health is observable before the
+  // first 15 s interval elapses (and before the clock is synced).
+  const uint32_t heap = firmwareFreeHeapBytes();
+  freeHeapBytes_ = heap;
+  minFreeHeapBytes_ = heap;
+  heapSamples_ = 1;
+
 #if defined(SENTINEL_RF_NTP_SERVER)
   if (strlen(SENTINEL_RF_NTP_SERVER) > 0) {
     configTime(0, 0, SENTINEL_RF_NTP_SERVER);
@@ -53,9 +65,13 @@ void RealtimeCore::begin(uint16_t port, const char* bootId,
   }
 
   server_.begin(port, bootId_, clock_, adapter_, auth);
+  activeCore = this;
 }
 
 void RealtimeCore::loop(uint32_t nowMs) {
+  // Health sampling runs before the clock gate so soak data is available even
+  // while no NTP or authenticated gateway has supplied a date yet.
+  sampleHeap(nowMs);
   tryNtpSync(nowMs);
   server_.loop(nowMs);
 
@@ -89,6 +105,16 @@ void RealtimeCore::loop(uint32_t nowMs) {
     lastEventPoll_ = nowMs;
     publishEvents(nowMs);
   }
+}
+
+void RealtimeCore::sampleHeap(uint32_t nowMs) {
+  if (uint32_t(nowMs - lastHeapSample_) < kHeapSampleIntervalMs) return;
+  lastHeapSample_ = nowMs;
+
+  const uint32_t heap = firmwareFreeHeapBytes();
+  freeHeapBytes_ = heap;
+  if (heap < minFreeHeapBytes_) minFreeHeapBytes_ = heap;
+  ++heapSamples_;
 }
 
 void RealtimeCore::tryNtpSync(uint32_t nowMs) {
@@ -137,7 +163,8 @@ void RealtimeCore::publishSystem(uint32_t nowMs) {
   status.operationalState = operationalStateName(state);
   status.capabilities = capabilities.values;
   status.capabilityCount = capabilities.count;
-  status.freeHeapBytes = firmwareFreeHeapBytes();
+  // Reuse the latest health sample; both consumers report the same reading.
+  status.freeHeapBytes = freeHeapBytes_;
 
   char message[kProtocolMessageBytes]{};
   if (!adapter_.buildSystemStatus(systemSession_.source(),
@@ -198,6 +225,28 @@ void RealtimeCore::publishEvents(uint32_t nowMs) {
     }
     server_.broadcast(message, strlen(message));
   }
+}
+
+bool snapshotRealtimeHealth(RealtimeHealthView& output) {
+  RealtimeCore* core = activeCore;
+  if (!core) return false;
+
+  output = RealtimeHealthView{};
+  output.fw = "0.3.1";
+  output.realtimeVersion = "0.4.0";
+  // Same source as /api/rf, so soak logs can correlate the two endpoints.
+  output.bootId = firmwareBootId();
+  output.uptimeMs = millis();
+  output.clockSynced = core->clockSynced();
+  output.clientCount = static_cast<uint32_t>(core->clientCount());
+  output.freeHeapBytes = core->freeHeapBytes();
+  output.minFreeHeapBytes = core->minFreeHeapBytes();
+  output.heapSamples = core->heapSamples();
+  output.droppedFrames = core->droppedFrames();
+  output.rejectedMessages = core->rejectedMessages();
+  output.droppedTelemetry = core->droppedTelemetry();
+  output.skippedSimulatedEvents = core->skippedSimulatedEvents();
+  return true;
 }
 
 }  // namespace realtime
