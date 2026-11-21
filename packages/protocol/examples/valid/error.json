@@ -1,0 +1,13 @@
+{
+  "protocolVersion": "1.0.0",
+  "type": "error",
+  "timestamp": "2026-11-21T16:10:05.000Z",
+  "sequence": 1047,
+  "source": "gateway",
+  "payload": {
+    "code": "UNSUPPORTED_PROTOCOL_VERSION",
+    "message": "Producer declared protocol version 2.0.0",
+    "retryable": false,
+    "relatedSequence": 1046
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "protocolVersion": "1.0.0",
+  "type": "connection.heartbeat",
+  "timestamp": "2026-11-21T16:10:15.000Z",
+  "sequence": 2,
+  "source": "gateway",
+  "payload": {
+    "bootId": "gw-ubuntu-01",
+    "uptimeMs": 3600000
+  }
+}

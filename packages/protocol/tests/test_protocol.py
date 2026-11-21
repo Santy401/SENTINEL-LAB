@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Automated checks for the SENTINEL-LAB v1 protocol contract."""
+
+from __future__ import annotations
+
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+PROTOCOL_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROTOCOL_ROOT))
+
+from validate_protocol import (  # noqa: E402
+    MAX_ENVELOPE_BYTES,
+    SCHEMA_DIR,
+    load_json,
+    validate_file,
+    validate_message,
+)
+
+VALID_DIR = PROTOCOL_ROOT / "examples" / "valid"
+INVALID_DIR = PROTOCOL_ROOT / "examples" / "invalid"
+
+
+class ProtocolContractTests(unittest.TestCase):
+    def test_valid_examples(self) -> None:
+        paths = sorted(VALID_DIR.glob("*.json"))
+        self.assertTrue(paths)
+        for path in paths:
+            with self.subTest(example=path.name):
+                self.assertEqual(validate_file(path), [])
+
+    def test_negative_examples_are_rejected(self) -> None:
+        paths = sorted(INVALID_DIR.glob("*.json"))
+        self.assertTrue(paths)
+        for path in paths:
+            with self.subTest(example=path.name):
+                self.assertTrue(validate_file(path), f"{path.name} was accepted")
+
+    def test_all_message_types_have_schema_and_example(self) -> None:
+        envelope = load_json(SCHEMA_DIR / "envelope.schema.json")
+        types = set(envelope["properties"]["type"]["enum"])
+        payload_schemas = {
+            path.name.removesuffix(".schema.json")
+            for path in SCHEMA_DIR.glob("*.schema.json")
+            if path.name != "envelope.schema.json"
+        }
+        examples = {path.stem for path in VALID_DIR.glob("*.json")}
+        self.assertEqual(types, payload_schemas)
+        self.assertEqual(types, examples)
+
+    def test_error_payloads_never_claim_real_measurements(self) -> None:
+        for path in SCHEMA_DIR.glob("*.schema.json"):
+            schema = load_json(path)
+            simulated = schema.get("properties", {}).get("simulated")
+            if simulated is not None:
+                self.assertEqual(simulated.get("const"), False, path.name)
+
+    def test_impossible_timestamp_is_rejected(self) -> None:
+        message = load_json(VALID_DIR / "system.status.json")
+        message["timestamp"] = "2026-02-30T16:10:03.000Z"
+        errors = validate_message(message)
+        self.assertTrue(any("invalid UTC timestamp" in error for error in errors))
+
+    def test_sequence_bounds(self) -> None:
+        message = load_json(VALID_DIR / "system.status.json")
+        for value in (-1, 9007199254740992):
+            with self.subTest(sequence=value):
+                candidate = dict(message, sequence=value)
+                self.assertTrue(validate_message(candidate))
+
+    def test_payload_size_limit(self) -> None:
+        message = load_json(VALID_DIR / "system.status.json")
+        message["payload"]["diagnostics"] = "x" * MAX_ENVELOPE_BYTES
+        errors = validate_message(message)
+        self.assertTrue(any("exceeds limit" in error for error in errors))
+
+    def test_non_finite_numbers_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "nan.json"
+            path.write_text('{"value": NaN}', encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_json(path)
+
+    def test_duplicate_keys_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicate.json"
+            path.write_text('{"sequence": 1, "sequence": 2}', encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_json(path)
+
+    def test_schema_files_are_valid_json(self) -> None:
+        paths = sorted(SCHEMA_DIR.glob("*.schema.json"))
+        self.assertEqual(len(paths), 10)
+        for path in paths:
+            with self.subTest(schema=path.name):
+                self.assertIsInstance(load_json(path), dict)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

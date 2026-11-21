@@ -1,0 +1,14 @@
+{
+  "type": "system.status",
+  "timestamp": "2026-11-21T16:10:03.000Z",
+  "sequence": 1,
+  "source": "esp32-s3-rf",
+  "payload": {
+    "firmwareVersion": "0.3.1",
+    "bootId": "rf-20261120",
+    "uptimeMs": 1000,
+    "operationalState": "MONITORING",
+    "transports": ["http"],
+    "simulated": false
+  }
+}
