@@ -94,3 +94,12 @@ code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-
 .token-input[aria-invalid="true"] {
   border-color: var(--danger);
 }
+
+/* Home-screen (standalone) mode: keep content clear of the notch and the
+   home indicator. Zero in a normal browser tab. */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}

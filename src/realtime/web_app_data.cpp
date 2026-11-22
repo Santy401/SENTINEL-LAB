@@ -7,6 +7,14 @@ extern const uint8_t js_start[] asm("_binary_web_assets_app_js_gz_start");
 extern const uint8_t js_end[] asm("_binary_web_assets_app_js_gz_end");
 extern const uint8_t css_start[] asm("_binary_web_assets_app_css_gz_start");
 extern const uint8_t css_end[] asm("_binary_web_assets_app_css_gz_end");
+extern const uint8_t webmanifest_start[] asm("_binary_web_assets_manifest_webmanifest_gz_start");
+extern const uint8_t webmanifest_end[] asm("_binary_web_assets_manifest_webmanifest_gz_end");
+extern const uint8_t touch_start[] asm("_binary_web_assets_apple_touch_icon_png_gz_start");
+extern const uint8_t touch_end[] asm("_binary_web_assets_apple_touch_icon_png_gz_end");
+extern const uint8_t icon192_start[] asm("_binary_web_assets_icon_192_png_gz_start");
+extern const uint8_t icon192_end[] asm("_binary_web_assets_icon_192_png_gz_end");
+extern const uint8_t icon512_start[] asm("_binary_web_assets_icon_512_png_gz_start");
+extern const uint8_t icon512_end[] asm("_binary_web_assets_icon_512_png_gz_end");
 
 namespace sentinel {
 namespace realtime {
@@ -25,6 +33,16 @@ size_t webAppAssets(const WebAsset** assets) {
       {"/assets/app.css", "text/css; charset=utf-8",
        "public, max-age=31536000, immutable", css_start,
        static_cast<size_t>(css_end - css_start)},
+      // Home-screen install (Safari "Add to Home Screen").
+      {"/manifest.webmanifest", "application/manifest+json", "no-cache",
+       webmanifest_start,
+       static_cast<size_t>(webmanifest_end - webmanifest_start)},
+      {"/apple-touch-icon.png", "image/png", "public, max-age=86400",
+       touch_start, static_cast<size_t>(touch_end - touch_start)},
+      {"/icon-192.png", "image/png", "public, max-age=86400", icon192_start,
+       static_cast<size_t>(icon192_end - icon192_start)},
+      {"/icon-512.png", "image/png", "public, max-age=86400", icon512_start,
+       static_cast<size_t>(icon512_end - icon512_start)},
   };
   *assets = kAssets;
   return sizeof(kAssets) / sizeof(kAssets[0]);
