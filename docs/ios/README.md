@@ -8,13 +8,14 @@ telemetría RF del ESP32-S3 por HTTP v0.3.1 y WebSocket `sentinel.v1`.
 | Elemento | Estado |
 |---|---|
 | Código fuente (`apps/ios/`) | Implementado |
-| `SentinelKit` compilado y probado en Linux | **No verificado**: en el equipo de desarrollo no hay toolchain Swift, Docker no está activo y requiere `sudo`; la descarga del toolchain oficial no se autorizó en esta sesión |
-| Compilación iOS (Xcode) | **No verificada**: requiere macOS; el job `ios-build` de CI la ejecutará en `macos-latest` |
+| `SentinelKit` compilado y probado | **Sí, en CI** (2026-11-22): `swift test` con 32 tests, 0 fallos, en el contenedor `swift:6.0` (Linux) y en `macos-latest`. En el equipo Arch local no hay toolchain Swift |
+| Compilación iOS (Xcode) | **Sí, en CI**: `xcodebuild build` → `BUILD SUCCEEDED` para `generic/platform=iOS Simulator` y `generic/platform=iOS` con `CODE_SIGNING_ALLOWED=NO`. Es una compilación **sin firmar y no instalable**. Los tests del target de la app solo se compilan |
+| Contrato con el firmware real | Comprobado en el ESP32 físico con un cliente Python que imita a la app: rol `ios` con token aceptado y reloj sincronizado (`docs/validation/p3-integration.md`). La app en sí **no se ha ejecutado** |
 | IPA firmada / instalación en iPhone | **No existe**: requiere macOS + Xcode + Apple ID (ver abajo) |
 | Prueba en iPhone 12 físico | **Pendiente** |
 
-No se afirma que la app compile, se instale o funcione en un iPhone hasta que
-CI o un Mac lo demuestren.
+Que compile en CI no implica que se instale ni que funcione en un iPhone. Eso
+sigue pendiente hasta probarlo con Xcode en un dispositivo.
 
 ## Arquitectura
 
