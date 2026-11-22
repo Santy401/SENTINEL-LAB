@@ -12,7 +12,7 @@
 set -euo pipefail
 
 T="${SENTINEL_IOS_TOOLCHAIN:-$HOME/.local/share/sentinel-ios-toolchain}"
-export PATH="$T/bin:$PATH"
+export PATH="$T/bin:$T/swift/usr/bin:$PATH"
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 VIA=""
 BUILD_ONLY=0
@@ -32,7 +32,7 @@ done
 say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 command -v xtool >/dev/null || { echo "FAIL: run scripts/linux-toolchain.sh first" >&2; exit 1; }
 if xtool sdk status 2>&1 | grep -qi "not installed"; then
-  echo "FAIL: Darwin SDK missing. Run scripts/linux-toolchain.sh --sdk /path/to/Xcode_27.1.xip" >&2
+  echo "FAIL: Darwin SDK missing. Run scripts/linux-toolchain.sh --sdk auto" >&2
   exit 1
 fi
 

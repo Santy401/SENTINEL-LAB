@@ -15,9 +15,10 @@ terceros y sin `sudo`.
 | SentinelKit compilado y probado en Arch | **Verificado**: `swift test`, 32 tests, 0 fallos |
 | Manifiesto `apps/ios/Package.swift` | **Verificado** en Linux (`swift package describe`) y compilado para iOS en CI macOS (job `xtool-package`) |
 | xtool ve el iPhone por USB | **Verificado** a través del `usbmuxd` de `home-server` reenviado por SSH: `xtool devices` → `iPhone [usb]` |
-| SDK de iOS (`xtool sdk install Xcode.xip`) | **Pendiente**: requiere el `.xip` de Apple descargado con tu Apple ID |
+| SDK de iOS (`xtool sdk install Xcode.xip`) | **Verificado**: `Xcode_27.1.xip` → iPhoneOS27.1.sdk; `xtool sdk status` → *Darwin SDK is installed* |
+| Compilar la app SwiftUI para iOS en Arch | **Verificado**: `linux-install.sh --build-only` → *Build complete!* (52 s), `SentinelLab.ipa` con ejecutable Mach-O arm64 y `Info.plist` sin variables |
 | Login Apple ID (`xtool auth login`) | **Pendiente**: interactivo, lo haces tú |
-| Compilar, firmar e instalar en el iPhone | **Pendiente**: requiere los dos pasos anteriores |
+| Firmar e instalar en el iPhone | **Pendiente**: requiere el login |
 | App ejecutándose en el iPhone | **No verificado** |
 
 ## Arquitectura
@@ -54,12 +55,17 @@ terceros y sin `sudo`.
    ```bash
    apps/ios/scripts/linux-toolchain.sh --ubuntu-host home-server
    echo 'export PATH="$HOME/.local/share/sentinel-ios-toolchain/bin:$PATH"' >> ~/.bashrc
+   # (el directorio bin enlaza swift, swiftc y las herramientas de SwiftPM que usa xtool)
    ```
 2. **SDK de iOS.** Descarga **Xcode 27.1** (`.xip`) desde
    <https://developer.apple.com/download/all/?q=Xcode> en el navegador, con tu
-   Apple ID (vale una cuenta gratuita). Después:
+   Apple ID (vale una cuenta gratuita). El archivo correcto es
+   «Xcode 27.1» → `Xcode_27.1.xip` (1,89 GB); no la RC, ni las betas, ni
+   «Command Line Tools». Después:
    ```bash
-   apps/ios/scripts/linux-toolchain.sh --sdk ~/Descargas/Xcode_27.1.xip
+   apps/ios/scripts/linux-toolchain.sh --sdk ~/Downloads/Xcode_27.1.xip
+   # o, para buscarlo en ~/Downloads y ~/Descargas:
+   apps/ios/scripts/linux-toolchain.sh --sdk auto
    ```
    Usa la versión que indica xtool: Swift 6.4 necesita el SDK de Xcode 27.
 3. **Login, una sola vez y de forma interactiva:**
@@ -80,6 +86,16 @@ terceros y sin `sudo`.
    acepta el permiso de red local y pega el token en Ajustes.
 
 Solo para generar la `.ipa` sin firmar: `linux-install.sh --build-only`.
+
+## Errores encontrados y corregidos
+
+- `xtool sdk install` necesita `swiftc` en `PATH`, no solo `swift`. Si no lo
+  encuentra, falla al 99 % con `Could not find executable 'swiftc' in PATH` y
+  borra el bundle temporal. El directorio `bin` de la toolchain enlaza ahora
+  `swift`, `swiftc` y las herramientas de SwiftPM, y el script comprueba
+  `xtool sdk status` después de instalar.
+- El `.xip` se guarda por defecto en `~/Downloads`; `--sdk auto` lo busca allí
+  y en `~/Descargas`.
 
 ## Limitaciones y riesgos conocidos
 
