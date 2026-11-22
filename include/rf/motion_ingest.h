@@ -65,6 +65,11 @@ struct MotionIngestSnapshot {
   bool signalLost = true;
   uint32_t sampleAgeMs = 0;
   uint32_t minIntervalMs = kMotionIngestDefaultMinIntervalMs;
+#ifdef SENTINEL_REALTIME
+  // P2-only counter used by the v1 motion.status adapter. It does not change
+  // the v0.3.1 HTTP payload or the release firmware binary.
+  uint64_t simulationRejected = 0;
+#endif
 };
 
 // Receives Sensor Logger HTTP Push batches and feeds real, paired

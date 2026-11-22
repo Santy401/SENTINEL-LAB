@@ -1,6 +1,6 @@
 # ADR-0004 · Contrato de protocolo compartido v1.0.0
 
-Estado: propuesto
+Estado: aceptado; adaptador de firmware implementado en v0.4.0 (software tested)
 
 Fecha: 2026-11-21
 

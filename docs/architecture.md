@@ -161,3 +161,51 @@ v0.2 mantiene su filtro original. Las rutas adicionales y validación de entrada
 se habilitan en WebDashboard exclusivamente con SENTINEL_RF. No cambia el motor
 original ni los pines. WiFiAp inicia AP; solo configuración privada optativa amplía
 a AP+STA. Consultar rf-protocol.md para límites, unidades y semántica científica.
+
+---
+
+# SENTINEL Core v0.4.0 — telemetría en tiempo real
+
+## Capas añadidas
+
+| Capa | Implementación |
+|---|---|
+| Transporte | `include/realtime/ws_server.h` y `src/realtime/ws_server.cpp`: RFC 6455 acotado en `ws://<AP-IP>:81/realtime` |
+| Codificación | `frame_codec.*`: tramas de hasta 1024 bytes, sin fragmentación, con `consumed` para tramas consecutivas |
+| Contrato | `protocol_adapter.*`: sobres v1 en buffers fijos y validador de mensajes entrantes |
+| Estado | `session.*`, `time_source.*`: terna `source`/`sessionId`/`sequence` y reloj UTC con compuerta de sincronización |
+| Retroceso | `bounded_queue.*`: dos tramas por par y contador de descartes |
+| Seguridad | `auth.*`: bearer token opcional solo para el rol `gateway` |
+| Integración | `realtime_core.*` y `rf/realtime_access.h`: sondeo RF, eventos, movimiento y heartbeat sin tocar las rutas HTTP |
+
+Los archivos compartidos solo cambian dentro de `#ifdef SENTINEL_REALTIME`. El
+entorno `_rf` no define esa macro y continúa siendo la imagen v0.3.1. El nuevo
+entorno `sentinel_esp32s3_n16r8_realtime` extiende `_rf`, añade `src/realtime/*`
+y define `SENTINEL_REALTIME=1`. Los cinco entornos compilan; detalles en
+`docs/validation/p2-software.md`.
+
+## Flujo de datos
+
+```text
+EventEngine / RfMonitor / MotionIngest / Laboratory
+                    |  (accesores de solo lectura)
+                    v
+             RealtimeCore  --->  ProtocolAdapter  --->  RealtimeServer
+                    |                                      |
+                    +--- SessionState + UtcClock -----------+
+                                    |
+                        WebSocket local :81 /realtime
+```
+
+HTTP y WebSocket comparten el estado en RAM, pero no comparten parser ni colas.
+WebServer permanece en el puerto 80. El reloj del ESP32 no contiene fecha civil:
+el adaptador suprime todos los sobres v1 hasta recibir una fecha válida de NTP
+local o de un `gateway` autenticado. Por diseño no hay telemetría con timestamps
+inventados.
+
+## Estado de verificación
+
+Implementado y probado en software en host. Sin flashear, sin heap medido en
+ejecución y sin validación de radio. Consultar `docs/realtime-core.md` para el
+contrato de uso y `docs/decisions/ADR-0005-nucleo-realtime-v040.md` para las
+decisiones y alternativas rechazadas.

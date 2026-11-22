@@ -7,6 +7,10 @@
 #include <ArduinoJson.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#ifdef SENTINEL_REALTIME
+#include "realtime/realtime_health.h"
+#include "realtime/realtime_health_json.h"
+#endif
 namespace sentinel { namespace rf {
 namespace {
 RfMonitor monitor;
@@ -202,5 +206,26 @@ void registerRoutes(WebServer& server) {
     }
     http->sendContent("");
   });
+#ifdef SENTINEL_REALTIME
+  // Additive read-only health route for local P2 soak validation; not part of
+  // Protocol v1 and no authentication is required for this local GET.
+  server.on("/api/realtime/status",HTTP_GET,[]{
+    sentinel::realtime::RealtimeHealthView health;
+    if(!sentinel::realtime::snapshotRealtimeHealth(health)) {
+      error(503,"realtime core inactive");return;
+    }
+    JsonDocument doc;
+    sentinel::realtime::writeRealtimeHealth(health,doc);
+    send(doc);
+  });
+#endif
 }
+
+#ifdef SENTINEL_REALTIME
+const RfMonitor& realtimeMonitor() { return monitor; }
+const EventEngine& realtimeEvents() { return eventEngine; }
+const Laboratory& realtimeLaboratory() { return lab; }
+const char* realtimeBootId() { return bootId; }
+uint32_t realtimeLastQueuedEvent() { return lastQueued; }
+#endif
 } }

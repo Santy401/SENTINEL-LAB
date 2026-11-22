@@ -28,6 +28,7 @@ jobs:
           - sentinel_esp32s3_n16r8_diag
           - sentinel_esp32s3_n16r8_v02
           - sentinel_esp32s3_n16r8_rf
+          - sentinel_esp32s3_n16r8_realtime
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

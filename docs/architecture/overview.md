@@ -23,7 +23,8 @@ flowchart TB
     RF[RF monitor]
     CAL[Calibración]
     HTTP[HTTP v0.3.1]
-    WS[WebSocket v0.4<br/>planeado]
+    HEALTH[/api/realtime/status<br/>solo _realtime]
+    WS[WebSocket v0.4<br/>probado en software]
   end
 
   subgraph Clients
@@ -43,6 +44,7 @@ flowchart TB
   ME --> HTTP
   CAL --> HTTP
   ME --> WS
+  WS --> HEALTH
   HTTP --> DASH
   WS --> WEB
   WS --> IOS
@@ -82,9 +84,18 @@ El contrato v1.0.0 define un sobre JSON versionado y transport-independent para
 movimiento, RF, estado, eventos, ciclo de conexión y errores. La terna
 `source` + `sessionId` + `sequence` identifica cada mensaje; los clientes RF se
 representan con `clientId` por sesión y nunca con MAC. Es la base de los
-adaptadores futuros; no sustituye la API HTTP v0.3.1. Ver
-[contrato](../protocol-contract.md) y
+adaptadores futuros; no sustituye la API HTTP v0.3.1. El adaptador del firmware
+existe en el entorno `_realtime` y está probado en software; la web, el gateway y
+iOS siguen pendientes. Ver [contrato](../protocol-contract.md) y
 [ADR-0004](../decisions/ADR-0004-protocolo-v1.md).
+
+El núcleo `_realtime` añade `GET /api/realtime/status` con contadores de salud de
+ejecución y el puerto WebSocket 81. El kit de evidencia
+`tools/hw_capture.py` + `tools/hw_report.py` audita esa superficie, el reloj y la
+recuperación. **Sin un informe P2 en PASS sobre captura real, el transporte y la
+placa siguen siendo hardware untested**; ver
+[validación física](validation/p2-hardware.md) y
+[validación de software](validation/p2-software.md).
 
 ## Migración
 

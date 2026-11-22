@@ -8,6 +8,7 @@ on:
       - "src/**"
       - "test/**"
       - "tools/**"
+      - "packages/protocol/**"
       - "integrations/n8n/**"
       - ".github/workflows/firmware-host-tests.yml"
   pull_request:
@@ -17,6 +18,7 @@ on:
       - "src/**"
       - "test/**"
       - "tools/**"
+      - "packages/protocol/**"
       - "integrations/n8n/**"
       - ".github/workflows/firmware-host-tests.yml"
   workflow_dispatch:
@@ -59,3 +61,9 @@ jobs:
 
       - name: Run host checks
         run: python3 tools/check_software.py
+
+      - name: Install protocol validator
+        run: python -m pip install -r packages/protocol/requirements.txt
+
+      - name: Validate generated Protocol v1 firmware fixtures
+        run: python3 packages/protocol/validate_protocol.py build/firmware-*.json

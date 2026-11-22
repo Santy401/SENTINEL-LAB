@@ -14,3 +14,8 @@
 
 #define SENTINEL_WIFI_SSID     "SENTINEL-CAMBIAR"
 #define SENTINEL_WIFI_PASSWORD "CLAVE-WPA2-CAMBIAR-12345"
+
+// Optional bearer token for privileged P2 WebSocket gateway sessions.
+// Empty disables privileged operations; telemetry remains locally readable.
+// Use a long random value and never commit the populated secrets.h.
+#define SENTINEL_REALTIME_BEARER_TOKEN ""
