@@ -41,6 +41,7 @@ class RealtimeCore {
   static constexpr uint32_t kNtpRetryMs = 5000;
   static constexpr uint32_t kHeapSampleIntervalMs = 15000;
 
+  void armSchedule(uint32_t nowMs);
   void sampleHeap(uint32_t nowMs);
   void tryNtpSync(uint32_t nowMs);
   void publishRf(uint32_t nowMs);
@@ -70,6 +71,7 @@ class RealtimeCore {
   RfClientView rfClients_[8]{};
   char message_[kProtocolMessageBytes]{};
   bool eventBridgeStarted_ = false;
+  bool scheduleArmed_ = false;
   uint32_t droppedTelemetry_ = 0;
   uint32_t skippedSimulatedEvents_ = 0;
 };

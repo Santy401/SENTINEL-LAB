@@ -13,6 +13,7 @@ ENVIRONMENT=""
 PORT="/dev/ttyACM0"
 CONFIRM=""
 DIR=""
+RELEASE=""
 
 usage() {
   cat <<'EOF'
@@ -20,7 +21,11 @@ Uso:
   tools/p2_flash_authorized.sh \
     --environment sentinel_esp32s3_n16r8_realtime \
     --port /dev/ttyACM0 \
-    --confirm 'FLASH sentinel_esp32s3_n16r8_realtime /dev/ttyACM0'
+    --confirm 'FLASH sentinel_esp32s3_n16r8_realtime /dev/ttyACM0' \
+    [--release v0.4.1]
+
+--release selecciona firmware/<release>/ dentro del kit (preparado con
+tools/p2_stage_release.py). Sin --release se usa v0.4.0 (realtime) o v0.3.1.
 
 Esta operación ESCRIBE EN FLASH. No se ejecuta automáticamente.
 No se aceptan opciones de borrado; NVS permanece intacto.
@@ -45,6 +50,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --confirm)
       CONFIRM="${2:-}"
+      shift 2
+      ;;
+    --release)
+      RELEASE="${2:-}"
       shift 2
       ;;
     --kit-root)
@@ -85,6 +94,18 @@ if [[ "${CONFIRM}" != "${EXPECTED}" ]]; then
   echo "FAIL: confirmación inexacta." >&2
   echo "Se esperaba literalmente: ${EXPECTED}" >&2
   exit 2
+fi
+
+if [[ -n "${RELEASE}" ]]; then
+  if [[ ! "${RELEASE}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "FAIL: --release debe tener la forma vMAYOR.MENOR.PARCHE" >&2
+    exit 2
+  fi
+  if [[ "${ENVIRONMENT}" == "sentinel_esp32s3_n16r8_rf" && "${RELEASE}" != "v0.3.1" ]]; then
+    echo "FAIL: el entorno _rf solo admite la release v0.3.1" >&2
+    exit 2
+  fi
+  DIR="${KIT_ROOT}/firmware/${RELEASE}"
 fi
 
 if [[ ! -d "${DIR}" ]]; then

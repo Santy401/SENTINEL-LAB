@@ -341,7 +341,7 @@ void RealtimeServer::enqueueText(Peer& peer, const char* text, size_t length) {
 
 void RealtimeServer::drain(Peer& peer) {
   size_t length = 0;
-  for (size_t i = 0; i < 2; ++i) {
+  for (size_t i = 0; i < kTxDepth; ++i) {
     if (!peer.tx.pop(reinterpret_cast<char*>(frame_), sizeof(frame_), length)) {
       break;
     }

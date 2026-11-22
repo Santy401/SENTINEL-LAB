@@ -41,6 +41,9 @@ class RealtimeServer {
   static constexpr uint32_t kPingIntervalMs = 20000;
   static constexpr uint32_t kRateWindowMs = 1000;
   static constexpr uint8_t kMaxFramesPerSecond = 8;
+  // Outbound frames buffered per peer. Three covers the worst periodic burst
+  // (hello + telemetry + status) observed on hardware without growing heap.
+  static constexpr size_t kTxDepth = 3;
 
   void begin(uint16_t port, const char* bootId, UtcClock& clock,
              ProtocolAdapter& adapter, const AuthGuard& auth);
@@ -66,7 +69,7 @@ class RealtimeServer {
     char request[kWsMaxFrameBytes]{};
     size_t requestLength = 0;
     WsDecoder decoder;
-    BoundedQueue<2, kWsEncodedFrameBytes> tx;
+    BoundedQueue<kTxDepth, kWsEncodedFrameBytes> tx;
     SessionState session;
     uint32_t acceptedAt = 0;
     uint32_t lastActivity = 0;
