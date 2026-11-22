@@ -82,6 +82,7 @@ struct SettingsView: View {
                 } footer: {
                     Text("Alertas locales: agitación ≥ 4 m/s², iPhone fuera de alcance (RSSI < −85 dBm), reinicio del ESP32, heap < 40 KB y reloj sin sincronizar más de 2 min. Cada tipo se limita a una alerta por minuto.")
                 }
+                AlertWebhookSection(model: model, settings: settings)
                 Section("Visualización") {
                     Toggle("Usar RSSI filtrado en la gráfica", isOn: $settings.showFilteredRssi)
                     Stepper("Ventana de gráfica: \(settings.chartWindowMinutes) min",
@@ -137,5 +138,49 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
         return "\(version) (\(build))"
+    }
+}
+
+
+/// Sends the iPhone's own alerts to the n8n webhook (Telegram) over cellular
+/// data when the ESP32 Wi-Fi has no internet. The HMAC secret stays in the Keychain.
+private struct AlertWebhookSection: View {
+    @Bindable var model: AppModel
+    @Bindable var settings: AppSettings
+    @State private var secretDraft = ""
+
+    var body: some View {
+        Section {
+            Toggle("Enviar alertas a Telegram (n8n)", isOn: $settings.alertWebhookEnabled)
+            TextField("URL del webhook", text: $settings.alertWebhookURL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.URL)
+                .font(.footnote.monospaced())
+            SecureField(model.alertSecretConfigured ? "Secreto guardado · pega otro para cambiarlo"
+                                                    : "Secreto de alertas (HMAC)", text: $secretDraft)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            HStack {
+                Button("Guardar secreto") {
+                    model.saveAlertSecret(secretDraft)
+                    secretDraft = ""
+                }
+                .disabled(secretDraft.trimmingCharacters(in: .whitespacesAndNewlines).count < 16)
+                Spacer()
+                if model.alertSecretConfigured {
+                    Button("Eliminar", role: .destructive) { model.clearAlertSecret() }
+                }
+            }
+            Button("Enviar alerta de prueba") { Task { await model.sendTestAlert() } }
+                .disabled(!model.alertSecretConfigured)
+            if let status = model.webhookStatus {
+                Text(status).font(.caption).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Alertas remotas")
+        } footer: {
+            Text("El iPhone firma cada alerta (HMAC-SHA256) y la envía a n8n, que la reenvía a Telegram. Si la Wi-Fi SENTINEL-LAB no tiene internet, iOS usa los datos móviles. Si no hay conexión, las alertas esperan en cola y se reintentan.")
+        }
     }
 }

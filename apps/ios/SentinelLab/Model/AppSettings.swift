@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SentinelKit
 
 /// Non-secret preferences persisted in UserDefaults. The bearer token is
 /// deliberately not here; it lives only in the Keychain.
@@ -24,6 +25,9 @@ final class AppSettings {
     var liveActivityEnabled: Bool { didSet { defaults.set(liveActivityEnabled, forKey: Keys.liveActivity) } }
     /// Local notifications for alerts while the app is in the background.
     var alertNotifications: Bool { didSet { defaults.set(alertNotifications, forKey: Keys.alertNotifications) } }
+    /// Send alerts from this iPhone to the n8n webhook (Telegram), over cellular if needed.
+    var alertWebhookEnabled: Bool { didSet { defaults.set(alertWebhookEnabled, forKey: Keys.alertWebhook) } }
+    var alertWebhookURL: String { didSet { defaults.set(alertWebhookURL, forKey: Keys.alertWebhookURL) } }
     /// RF clientId the user identified as this iPhone (the ESP32 measures it).
     var thisClientId: UInt64? {
         didSet {
@@ -49,6 +53,8 @@ final class AppSettings {
         static let haptics = "settings.haptics"
         static let liveActivity = "settings.liveActivity"
         static let alertNotifications = "settings.alertNotifications"
+        static let alertWebhook = "settings.alertWebhook"
+        static let alertWebhookURL = "settings.alertWebhookURL"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -64,6 +70,8 @@ final class AppSettings {
         hapticsEnabled = defaults.object(forKey: Keys.haptics) as? Bool ?? true
         liveActivityEnabled = defaults.object(forKey: Keys.liveActivity) as? Bool ?? false
         alertNotifications = defaults.object(forKey: Keys.alertNotifications) as? Bool ?? true
+        alertWebhookEnabled = defaults.object(forKey: Keys.alertWebhook) as? Bool ?? true
+        alertWebhookURL = defaults.string(forKey: Keys.alertWebhookURL) ?? AlertWebhookPayload.defaultURL.absoluteString
         if let stored = defaults.string(forKey: Keys.deviceId) {
             deviceId = stored
         } else {

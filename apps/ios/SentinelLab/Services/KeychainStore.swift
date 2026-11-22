@@ -19,6 +19,8 @@ struct KeychainStore {
     let account: String
 
     static let realtimeToken = KeychainStore(service: "lab.sentinel.app.realtime", account: "bearer-token")
+    /// Shared HMAC secret for the n8n alert webhook (~/.config/sentinel-lab/alert-secret).
+    static let alertSecret = KeychainStore(service: "lab.sentinel.app.alerts", account: "webhook-hmac")
 
     private var baseQuery: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,

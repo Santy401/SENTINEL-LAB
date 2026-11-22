@@ -96,6 +96,9 @@ final class AppModel {
     @ObservationIgnored let haptics = HapticsService()
     @ObservationIgnored let liveActivity = LiveActivityService()
     @ObservationIgnored let notifier = AlertNotifier()
+    @ObservationIgnored let webhook = AlertWebhookService()
+    var webhookStatus: String?
+    var alertSecretConfigured: Bool = KeychainStore.alertSecret.read()?.isEmpty == false
     @ObservationIgnored private var housekeepingTask: Task<Void, Never>?
     /// True while the Movimiento tab is on screen (haptics only play there).
     @ObservationIgnored var motionTabVisible = false
@@ -165,6 +168,41 @@ final class AppModel {
         await notifier.requestAuthorization()
     }
 
+    func saveAlertSecret(_ secret: String) {
+        let trimmed = secret.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 16 else { webhookStatus = "El secreto es demasiado corto"; return }
+        do {
+            try KeychainStore.alertSecret.save(trimmed)
+            alertSecretConfigured = true
+            webhookStatus = "Secreto guardado en el Keychain"
+        } catch {
+            webhookStatus = "No se pudo guardar el secreto"
+        }
+    }
+
+    func clearAlertSecret() {
+        try? KeychainStore.alertSecret.delete()
+        alertSecretConfigured = false
+        webhookStatus = "Secreto eliminado"
+    }
+
+    func sendTestAlert() async {
+        guard let url = URL(string: settings.alertWebhookURL) else { webhookStatus = "URL inválida"; return }
+        let secret = KeychainStore.alertSecret.read()
+        webhookStatus = await webhook.sendTest(url: url, secret: secret)
+    }
+
+    private func webhookMetrics() -> [String: Double] {
+        var metrics: [String: Double] = [:]
+        if let p = realtimeStatus?.phoneMotion {
+            if let v = p.linearAccelMs2 { metrics["linearAccelMs2"] = v }
+            if let v = p.peakMs2 { metrics["peakMs2"] = v }
+            if let v = p.intensity { metrics["intensity"] = v }
+        }
+        if let heap = realtimeStatus?.freeHeapBytes { metrics["freeHeapBytes"] = Double(heap) }
+        return metrics
+    }
+
     func clearAlerts() {
         alertEngine.clear()
         alerts = []
@@ -186,6 +224,21 @@ final class AppModel {
         if !raised.isEmpty {
             alerts = alertEngine.alerts
             if settings.alertNotifications { raised.forEach(notifier.notify) }
+            if settings.alertWebhookEnabled {
+                let status = realtimeStatus
+                for alert in raised {
+                    webhook.enqueue(alert, bootId: status?.bootId, firmwareVersion: status?.firmwareVersion,
+                                    metrics: webhookMetrics())
+                }
+            }
+        }
+        if settings.alertWebhookEnabled, webhook.pendingCount > 0,
+           let url = URL(string: settings.alertWebhookURL) {
+            let secret = KeychainStore.alertSecret.read()
+            Task { [weak self] in
+                await self?.webhook.flush(url: url, secret: secret)
+                self?.webhookStatus = self?.webhook.lastResult
+            }
         }
         if settings.liveActivityEnabled {
             if !liveActivity.isRunning { liveActivity.start(host: settings.host, state: activityState()) }
