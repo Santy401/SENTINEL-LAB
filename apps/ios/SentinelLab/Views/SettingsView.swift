@@ -60,6 +60,28 @@ struct SettingsView: View {
                     Text("Con el token de SENTINEL_REALTIME_BEARER_TOKEN esta app actúa como fuente de hora: su saludo autenticado sincroniza el reloj UTC del ESP32. El token se guarda solo en el Keychain de este iPhone y nunca se exporta.")
                 }
 
+                Section {
+                    Toggle("Vibración según la agitación", isOn: $settings.hapticsEnabled)
+                    Toggle("Actividad en vivo (pantalla bloqueada)", isOn: Binding(
+                        get: { model.settings.liveActivityEnabled },
+                        set: { model.setLiveActivity($0) }))
+                    if let error = model.liveActivityError {
+                        Text(error).font(.caption).foregroundStyle(.orange)
+                    } else if model.liveActivityRunning {
+                        Text("Actividad en vivo activa.").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Toggle("Notificar alertas en segundo plano", isOn: $settings.alertNotifications)
+                        .onChange(of: settings.alertNotifications) { _, enabled in
+                            if enabled { Task { await model.requestNotificationPermission() } }
+                        }
+                    if !model.alerts.isEmpty {
+                        Button("Borrar alertas (\(model.alerts.count))", role: .destructive) { model.clearAlerts() }
+                    }
+                } header: {
+                    Text("Laboratorio")
+                } footer: {
+                    Text("Alertas locales: agitación ≥ 4 m/s², iPhone fuera de alcance (RSSI < −85 dBm), reinicio del ESP32, heap < 40 KB y reloj sin sincronizar más de 2 min. Cada tipo se limita a una alerta por minuto.")
+                }
                 Section("Visualización") {
                     Toggle("Usar RSSI filtrado en la gráfica", isOn: $settings.showFilteredRssi)
                     Stepper("Ventana de gráfica: \(settings.chartWindowMinutes) min",

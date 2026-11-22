@@ -90,6 +90,18 @@ final class AppModel {
     private(set) var motionEchoMs2: Double?
     @ObservationIgnored private var motionSampleIndex = UInt64(Date().timeIntervalSince1970 * 1_000)
 
+    // MARK: Alerts, haptics, Live Activity
+    private(set) var alerts: [LabAlert] = []
+    @ObservationIgnored private var alertEngine = AlertEngine()
+    @ObservationIgnored let haptics = HapticsService()
+    @ObservationIgnored let liveActivity = LiveActivityService()
+    @ObservationIgnored let notifier = AlertNotifier()
+    @ObservationIgnored private var housekeepingTask: Task<Void, Never>?
+    /// True while the Movimiento tab is on screen (haptics only play there).
+    @ObservationIgnored var motionTabVisible = false
+    private(set) var liveActivityRunning = false
+    private(set) var liveActivityError: String?
+
     // MARK: Distance
     private(set) var lab: LabSnapshot?
     private(set) var distanceTracker = SessionDistanceTracker()
@@ -123,7 +135,90 @@ final class AppModel {
         motion.start()
         monitor.start { [weak self] available, wifi in self?.networkChanged(available: available, wifi: wifi) }
         startPolling()
+        startHousekeeping()
+        liveActivity.resume()
+        liveActivityRunning = liveActivity.isRunning
+        Task { await notifier.refreshAuthorization() }
         if settings.autoConnect { connect() }
+    }
+
+    // MARK: - Alerts, haptics, Live Activity
+
+    /// Called by MotionView whenever the motion snapshot changes.
+    func hapticTick() {
+        haptics.update(shakeMs2: motion.snapshot.metrics.rmsMs2,
+                       enabled: settings.hapticsEnabled && motionTabVisible)
+    }
+
+    func setLiveActivity(_ enabled: Bool) {
+        settings.liveActivityEnabled = enabled
+        if enabled {
+            liveActivity.start(host: settings.host, state: activityState())
+        } else {
+            liveActivity.stop()
+        }
+        liveActivityRunning = liveActivity.isRunning
+        liveActivityError = liveActivity.lastError
+    }
+
+    func requestNotificationPermission() async {
+        await notifier.requestAuthorization()
+    }
+
+    func clearAlerts() {
+        alertEngine.clear()
+        alerts = []
+    }
+
+    private func startHousekeeping() {
+        housekeepingTask?.cancel()
+        housekeepingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                self?.housekeeping()
+            }
+        }
+    }
+
+    private func housekeeping() {
+        guard !isDemo else { return }
+        let raised = alertEngine.evaluate(alertInputs())
+        if !raised.isEmpty {
+            alerts = alertEngine.alerts
+            if settings.alertNotifications { raised.forEach(notifier.notify) }
+        }
+        if settings.liveActivityEnabled {
+            if !liveActivity.isRunning { liveActivity.start(host: settings.host, state: activityState()) }
+            liveActivity.update(activityState())
+        }
+        liveActivityRunning = liveActivity.isRunning
+        liveActivityError = liveActivity.lastError
+    }
+
+    private func alertInputs() -> AlertInputs {
+        let status = realtimeStatus
+        let reachable = lastHTTPSuccess.map { Date().timeIntervalSince($0) < 10 } ?? false
+        var missing = false
+        if let id = thisClientId, let rf = latestRf, machine.phase == .streaming {
+            missing = !rf.clients.contains { $0.clientId == id }
+        }
+        let rssi = distance.flatMap { $0.filteredRssiDbm ?? $0.rssiDbm }.map(Double.init)
+        let metrics = motion.snapshot.metrics
+        return AlertInputs(now: Date(), shakeMs2: metrics.sampleCount > 0 ? metrics.rmsMs2 : nil,
+                           rssiDbm: rssi, phoneMissing: missing, bootId: status?.bootId,
+                           resetReason: status?.resetReason, freeHeapBytes: status?.freeHeapBytes,
+                           clockSynced: status?.clockSynced, deviceReachable: reachable)
+    }
+
+    func activityState() -> SentinelActivityState {
+        let rgb = realtimeStatus?.rgb
+        let metrics = motion.snapshot.metrics
+        return SentinelActivityState(connected: machine.phase == .streaming || machine.phase == .awaitingData,
+                                     clockSynced: realtimeStatus?.clockSynced ?? false,
+                                     shakeIntensity: metrics.intensity, shakeMs2: metrics.rmsMs2,
+                                     ledRed: rgb?.r ?? 0, ledGreen: rgb?.g ?? 0, ledBlue: rgb?.b ?? 0,
+                                     ledMode: rgb?.mode ?? "offline",
+                                     lastAlert: alerts.first.map { $0.kind.title }, updatedAt: Date())
     }
 
     func connect() {

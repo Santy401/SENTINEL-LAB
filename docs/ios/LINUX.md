@@ -99,6 +99,15 @@ Solo para generar la `.ipa` sin firmar: `linux-install.sh --build-only`.
 
 ## Limitaciones y riesgos conocidos
 
+- **Live Activity / widget no se instala con xtool.** xtool 1.24 no puede
+  firmar extensiones de app (`Can't find free space of LoadCommands`, issue
+  xtool-org/xtool#379). La 2.0.0-beta.1, que lo corrige según el issue, falla al
+  hacer `strip` del `.appex` y además migra el SDK a `~/.config/xtool` (hay que
+  devolverlo a `~/.config/swiftpm/swift-sdks/darwin.artifactbundle` para la
+  1.24). Por eso `xtool.yml` excluye la extensión. El proyecto Xcode sí la
+  compila, y la app funciona sin ella: la opción de Actividad en vivo informa
+  de que no está disponible.
+
 - **Login con Apple ID gratuito.** Usa APIs privadas de Apple. Desde el
   2026-10-12, Apple rechaza a Sideloader, AltStore, Sideloadly e Impactor
   (`-80045`). Lo comprobé el 2026-11-22: Sideloader falla antes de pedir el

@@ -1,0 +1,244 @@
+{
+ "name": "SENTINEL-LAB · Alertas",
+ "nodes": [
+  {
+   "id": "659ada36-9f46-402f-8f83-57a684dfe766",
+   "name": "Webhook alerta",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2.1,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "sentinel-alerts",
+    "responseMode": "responseNode",
+    "options": {
+     "rawBody": true
+    }
+   }
+  },
+  {
+   "id": "666f16cd-e28a-4960-af4e-f720a5a72290",
+   "name": "Leer cuerpo firmado",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    0
+   ],
+   "parameters": {
+    "jsCode": "\n// Recover the exact bytes the gateway signed (rawBody), parse the alert.\nconst item = $input.first();\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst raw = buf.toString('utf8');\nconst headers = item.json.headers || {};\nlet alert = null;\ntry { alert = JSON.parse(raw); } catch (e) { alert = null; }\nreturn [{ json: {\n  raw,\n  ts: String(headers['x-sentinel-timestamp'] || ''),\n  sig: String(headers['x-sentinel-signature'] || '').toLowerCase(),\n  alert,\n} }];\n"
+   }
+  },
+  {
+   "id": "73ae0333-87b7-4774-8592-2ab061f8ae8d",
+   "name": "Calcular HMAC",
+   "type": "n8n-nodes-base.crypto",
+   "typeVersion": 1,
+   "position": [
+    480,
+    0
+   ],
+   "parameters": {
+    "action": "hmac",
+    "type": "SHA256",
+    "value": "={{ $json.ts + '.' + $json.raw }}",
+    "dataPropertyName": "expected",
+    "secret": "REEMPLAZAR_SECRETO_ALERTAS",
+    "encoding": "hex"
+   }
+  },
+  {
+   "id": "861e4c14-8ea3-48c3-8b2b-5a2e6c8c7f0a",
+   "name": "¿Firma y hora válidas?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    720,
+    0
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "combinator": "and",
+     "conditions": [
+      {
+       "id": "123fa03c-4126-4654-9640-635a31b6c0ef",
+       "leftValue": "={{ $json.expected }}",
+       "rightValue": "={{ $json.sig }}",
+       "operator": {
+        "type": "string",
+        "operation": "equals"
+       }
+      },
+      {
+       "id": "3ca15f8d-d7e1-4a85-b256-43e3c09abf25",
+       "leftValue": "={{ Math.abs(Date.now()/1000 - Number($json.ts)) }}",
+       "rightValue": 300,
+       "operator": {
+        "type": "number",
+        "operation": "lt"
+       }
+      },
+      {
+       "id": "6475dbf8-72e6-46d3-984f-9ad743235c58",
+       "leftValue": "={{ $json.alert !== null }}",
+       "rightValue": true,
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ]
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "0fec6cd1-0db5-4ae2-a991-d20fa753c4b8",
+   "name": "Formatear mensaje",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    960,
+    -100
+   ],
+   "parameters": {
+    "jsCode": "\nconst a = $json.alert || {};\nconst icon = { critical: '🚨', warning: '⚠️', info: 'ℹ️', recovery: '✅' }[a.severity] || '🔔';\nconst dev = a.device || {};\nconst lines = [\n  `${icon} SENTINEL-LAB · ${a.title || a.rule || 'Alerta'}`,\n  a.message || '',\n  '',\n  `Regla: ${a.rule || '-'} · Severidad: ${a.severity || '-'}`,\n  `Hora (UTC): ${a.occurredAt || '-'}`,\n  `ESP32: fw ${dev.firmwareVersion || '?'} · boot ${dev.bootId || '?'}`,\n];\nreturn [{ json: { text: lines.join('\\n').slice(0, 3900), alert: a } }];\n"
+   }
+  },
+  {
+   "id": "45c577d3-ccf0-4aa1-a8d0-32615836c37a",
+   "name": "Aceptada (202)",
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.4,
+   "position": [
+    1200,
+    -200
+   ],
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={{ JSON.stringify({ ok: true, id: $json.alert.id || null }) }}",
+    "options": {
+     "responseCode": 202
+    }
+   }
+  },
+  {
+   "id": "f75fde1a-c823-47ea-9d44-3e80c59d333c",
+   "name": "Enviar Telegram",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    1200,
+    0
+   ],
+   "parameters": {
+    "chatId": "REEMPLAZAR_CHAT_ID",
+    "text": "={{ $('Formatear mensaje').item.json.text }}",
+    "additionalFields": {
+     "appendAttribution": false
+    }
+   },
+   "disabled": true
+  },
+  {
+   "id": "0cebbb84-e685-4919-b02f-4c87aab63bb7",
+   "name": "Rechazada (401)",
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.4,
+   "position": [
+    960,
+    140
+   ],
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={{ JSON.stringify({ ok: false, error: 'invalid signature' }) }}",
+    "options": {
+     "responseCode": 401
+    }
+   }
+  }
+ ],
+ "connections": {
+  "Webhook alerta": {
+   "main": [
+    [
+     {
+      "node": "Leer cuerpo firmado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer cuerpo firmado": {
+   "main": [
+    [
+     {
+      "node": "Calcular HMAC",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Calcular HMAC": {
+   "main": [
+    [
+     {
+      "node": "¿Firma y hora válidas?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Firma y hora válidas?": {
+   "main": [
+    [
+     {
+      "node": "Formatear mensaje",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Rechazada (401)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Formatear mensaje": {
+   "main": [
+    [
+     {
+      "node": "Aceptada (202)",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Enviar Telegram",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "timezone": "America/Bogota"
+ },
+ "active": false
+}

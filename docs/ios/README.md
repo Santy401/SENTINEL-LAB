@@ -234,6 +234,71 @@ atenuado. Con un firmware sin motor RGB se indica «Firmware sin motor RGB».
 - **No verificado en el iPhone:** sensores reales, escena 3D, envío al ESP32,
   calibración contra el firmware 0.5.0.
 
+## Placa 3D, vibración, Actividad en vivo y alertas (app 1.2)
+
+### Placa ESP32-S3 en 3D
+
+- El Panel muestra como portada la placa ESP32-S3-DevKitC-1 en SceneKit. Se
+  puede girar y acercar, y al tocar una pieza se abre su ficha técnica, con los
+  mismos textos que la web.
+- **Fuente de verdad:** la web. Los textos y las dimensiones vienen de
+  `apps/web/src/lib/board-parts.ts`; la geometría es una transcripción en
+  milímetros de `apps/web/src/three/board-model.ts`. La copia iOS está en
+  `SentinelKit/Sources/SentinelKit/BoardModel.swift`, y
+  `scripts/check-board-model.py` comprueba que los textos y las dimensiones
+  coinciden con la web.
+- El modelo es **original y aproximado**: dimensiones públicas de Espressif, no
+  un CAD del fabricante.
+- **LED virtual:** el domo del WS2812 brilla con el color de
+  `/api/realtime/status.rgb`. El tono se amplifica para que se vea (el LED
+  físico está limitado a 64/255), pero se conserva exacto.
+- **Reacción al movimiento:** con la agitación, la placa se inclina como mucho
+  4°. Desactivado con «Reducir movimiento».
+- **Sin Metal:** se usa una vista superior 2D dibujada con las mismas piezas.
+
+### Vibración háptica
+
+- En la pestaña Movimiento, un háptico continuo (CoreHaptics) sigue la
+  agitación filtrada con la misma escala que el LED: |a| / 8 m/s², con una zona
+  muerta del 6 %.
+- **Frecuencia de actualización:** como mucho 20 Hz.
+- **Cuándo se apaga:** fuera de esa pestaña, con «Reducir movimiento», en bajo
+  consumo, o si se desactiva en Ajustes.
+
+### Actividad en vivo
+
+- **Contenido:** estado de conexión, reloj, barra de agitación, color del LED y
+  última alerta, en la pantalla bloqueada; en Dynamic Island cuando existe (el
+  iPhone 12 no la tiene).
+- **Activación:** desde Ajustes → Laboratorio.
+- **Actualización:** solo la app, con cambios significativos y como mucho cada
+  2 s.
+- **Extensión:** `SentinelLabWidget`, declarada en `project.yml` y en
+  `xtool.yml` (`extensions:`).
+- **Cuenta gratuita:** xtool firma la extensión con un App ID adicional.
+- **Si no se inicia:** la app muestra el error de ActivityKit en Ajustes y
+  sigue funcionando. Esto ocurre si la extensión no llegó al bundle o si las
+  Actividades en vivo están desactivadas en iOS.
+
+### Alertas locales
+
+Las calcula `AlertEngine` (SentinelKit, con tests) cada segundo a partir de
+datos reales:
+
+| Alerta | Condición | Severidad |
+|---|---|---|
+| Agitación fuerte | RMS ≥ 4 m/s² | crítica |
+| iPhone fuera de alcance | RSSI filtrado < −85 dBm, o el ESP32 ya no lista este iPhone | aviso |
+| ESP32 reiniciado | cambio de `bootId`; incluye `resetReason` | crítica |
+| Memoria baja | heap libre < 40 KB | aviso |
+| Reloj sin sincronizar | > 2 min sin UTC con el dispositivo accesible | información |
+
+- **Disparo:** por flanco. Una condición que se mantiene genera una sola alerta,
+  y cada tipo tiene un enfriamiento de 60 s (el reinicio siempre avisa).
+- **Lista:** se muestran las últimas 50 en el Panel.
+- **En segundo plano:** se envían como notificación local
+  (UNUserNotificationCenter) si se autorizan en Ajustes.
+
 ## Seguridad y límites
 
 - HTTP/WebSocket sin TLS: aceptable solo en la red aislada del laboratorio.

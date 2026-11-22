@@ -9,6 +9,8 @@ struct DashboardView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     if model.isDemo { DemoBanner() }
+                    BoardCard()
+                    if !model.alerts.isEmpty { AlertsCard() }
                     connectionCard
                     if model.realtimeStatus == nil && model.deviceState == nil && !model.isDemo {
                         noDeviceState

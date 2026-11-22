@@ -75,6 +75,7 @@ run(['g++','-std=c++17','-Wall','-Wextra','-Werror','-Iinclude','-Itest/posix_st
      'src/realtime/frame_codec.cpp','src/realtime/handshake.cpp','src/realtime/protocol_adapter.cpp',
      'src/realtime/session.cpp','src/realtime/time_source.cpp','-o','build/host_device'])
 run([sys.executable,'tools/tests/test_gateway.py','-v'])
+run([sys.executable,'tools/tests/test_gateway_services.py'])
 if Path('apps/web/dist/index.html').is_file():
     run([sys.executable,'tools/embed_web.py','--check'])
 print('Gateway unit, HTTP and emulator integration tests OK')
