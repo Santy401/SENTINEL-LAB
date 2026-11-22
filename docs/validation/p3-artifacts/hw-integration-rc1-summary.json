@@ -1,0 +1,191 @@
+{
+  "startedAt": "2026-11-21T23:56:54.249Z",
+  "checks": {
+    "firmware_0.4.1": {
+      "ok": true,
+      "detail": "0.4.1"
+    },
+    "fw_http_compat_0.3.1": {
+      "ok": true,
+      "detail": null
+    },
+    "http_api_state": {
+      "ok": true,
+      "detail": "0.3.1"
+    },
+    "handshake_timeout_408": {
+      "ok": true,
+      "detail": {
+        "elapsedS": 5.01,
+        "response": "HTTP/1.1 408 Request Timeout\r\nConnection"
+      }
+    },
+    "clock_synced_by_gateway": {
+      "ok": true,
+      "detail": {
+        "clockSource": "peer",
+        "clockSyncAgeMs": 214
+      }
+    },
+    "fin_releases_slot": {
+      "ok": true,
+      "detail": {
+        "before": 2,
+        "during": 3,
+        "after": 2,
+        "remoteCloses": [
+          0,
+          1
+        ]
+      }
+    },
+    "passive_client_survives_idle_limit": {
+      "ok": true,
+      "detail": {
+        "pings": 3,
+        "error": null
+      }
+    },
+    "passive_client_receives_telemetry": {
+      "ok": true,
+      "detail": {
+        "connection.hello": 1,
+        "rf.telemetry": 75,
+        "connection.heartbeat": 15,
+        "system.status": 5
+      }
+    },
+    "all_frames_schema_valid": {
+      "ok": true,
+      "detail": {
+        "frames": 100,
+        "types": {
+          "connection.hello": 1,
+          "rf.telemetry": 77,
+          "connection.heartbeat": 16,
+          "event": 1,
+          "system.status": 5
+        },
+        "errors": {}
+      }
+    },
+    "no_drops": {
+      "ok": false,
+      "detail": {
+        "droppedFrames": 1,
+        "droppedTelemetry": 0,
+        "rejectedMessages": 0
+      }
+    },
+    "same_boot": {
+      "ok": true,
+      "detail": null
+    }
+  },
+  "preSync": {
+    "fw": "0.3.1",
+    "httpApiVersion": "0.3.1",
+    "firmwareVersion": "0.4.1",
+    "realtimeVersion": "0.4.1",
+    "bootId": "1ce886a00f994f4f",
+    "resetReason": "POWERON",
+    "uptimeMs": 65964,
+    "clockSynced": false,
+    "clockSource": "none",
+    "clockSyncAgeMs": null,
+    "clientCount": 0,
+    "freeHeapBytes": 211544,
+    "minFreeHeapBytes": 211308,
+    "largestFreeBlockBytes": 163828,
+    "minLoopStackFreeBytes": 5624,
+    "heapSamples": 5,
+    "droppedFrames": 0,
+    "rejectedMessages": 0,
+    "droppedTelemetry": 0,
+    "skippedSimulatedEvents": 0,
+    "handshakeTimeouts": 0,
+    "idleTimeouts": 0,
+    "remoteCloses": 0
+  },
+  "postSync": {
+    "fw": "0.3.1",
+    "httpApiVersion": "0.3.1",
+    "firmwareVersion": "0.4.1",
+    "realtimeVersion": "0.4.1",
+    "bootId": "1ce886a00f994f4f",
+    "resetReason": "POWERON",
+    "uptimeMs": 71213,
+    "clockSynced": true,
+    "clockSource": "peer",
+    "clockSyncAgeMs": 214,
+    "clientCount": 1,
+    "freeHeapBytes": 211544,
+    "minFreeHeapBytes": 211308,
+    "largestFreeBlockBytes": 163828,
+    "minLoopStackFreeBytes": 5624,
+    "heapSamples": 5,
+    "droppedFrames": 1,
+    "rejectedMessages": 0,
+    "droppedTelemetry": 0,
+    "skippedSimulatedEvents": 0,
+    "handshakeTimeouts": 1,
+    "idleTimeouts": 0,
+    "remoteCloses": 0
+  },
+  "passive": {
+    "frames": {
+      "connection.hello": 1,
+      "rf.telemetry": 75,
+      "connection.heartbeat": 15,
+      "system.status": 5
+    },
+    "pings": 3,
+    "alive": true,
+    "error": null
+  },
+  "final": {
+    "fw": "0.3.1",
+    "httpApiVersion": "0.3.1",
+    "firmwareVersion": "0.4.1",
+    "realtimeVersion": "0.4.1",
+    "bootId": "1ce886a00f994f4f",
+    "resetReason": "POWERON",
+    "uptimeMs": 148096,
+    "clockSynced": true,
+    "clockSource": "peer",
+    "clockSyncAgeMs": 2077,
+    "clientCount": 0,
+    "freeHeapBytes": 206348,
+    "minFreeHeapBytes": 206348,
+    "largestFreeBlockBytes": 155636,
+    "minLoopStackFreeBytes": 5460,
+    "heapSamples": 10,
+    "droppedFrames": 1,
+    "rejectedMessages": 0,
+    "droppedTelemetry": 0,
+    "skippedSimulatedEvents": 0,
+    "handshakeTimeouts": 1,
+    "idleTimeouts": 0,
+    "remoteCloses": 1
+  },
+  "gateway": {
+    "state": "disconnected",
+    "clockAuthority": true,
+    "lastSyncAt": "2026-11-21T23:58:14.320Z",
+    "lastError": null,
+    "reconnects": 0,
+    "framesReceived": 100,
+    "framesByType": {
+      "connection.hello": 1,
+      "rf.telemetry": 77,
+      "connection.heartbeat": 16,
+      "event": 1,
+      "system.status": 5
+    },
+    "deviceSessionId": "1ce886a00f994f4f-p0-2",
+    "uptimeS": 77.1,
+    "gatewayVersion": "0.1.0"
+  },
+  "finishedAt": "2026-11-21T23:58:16.525Z",
+  "allOk": false
+}

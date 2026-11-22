@@ -1,0 +1,532 @@
+{
+  "startedAt": "2026-11-22T00:04:55.938Z",
+  "checks": {
+    "firmware_0.4.1": {
+      "ok": true,
+      "detail": "0.4.1"
+    },
+    "fw_http_compat_0.3.1": {
+      "ok": true,
+      "detail": null
+    },
+    "http_api_state": {
+      "ok": true,
+      "detail": "0.3.1"
+    },
+    "handshake_timeout_408": {
+      "ok": true,
+      "detail": {
+        "elapsedS": 5.01,
+        "response": "HTTP/1.1 408 Request Timeout\r\nConnection"
+      }
+    },
+    "clock_synced_by_gateway": {
+      "ok": true,
+      "detail": {
+        "clockSource": "peer",
+        "clockSyncAgeMs": 233
+      }
+    },
+    "fin_releases_slot": {
+      "ok": true,
+      "detail": {
+        "before": 2,
+        "during": 3,
+        "after": 2,
+        "remoteCloses": [
+          0,
+          1
+        ]
+      }
+    },
+    "ios_role_with_token_accepted": {
+      "ok": true,
+      "detail": [
+        "connection.hello",
+        "rf.telemetry",
+        "connection.heartbeat",
+        "rf.telemetry",
+        "rf.telemetry",
+        "rf.telemetry"
+      ]
+    },
+    "gateway_role_without_token_refused": {
+      "ok": true,
+      "detail": [
+        "connection.hello",
+        "error:UNAUTHORIZED",
+        "rf.telemetry",
+        "connection.heartbeat",
+        "rf.telemetry",
+        "rf.telemetry"
+      ]
+    },
+    "passive_client_survives_idle_limit": {
+      "ok": true,
+      "detail": {
+        "pings": 3,
+        "error": null
+      }
+    },
+    "passive_client_receives_telemetry": {
+      "ok": true,
+      "detail": {
+        "connection.hello": 1,
+        "connection.heartbeat": 16,
+        "system.status": 5,
+        "rf.telemetry": 75
+      }
+    },
+    "gateway_proxy_realtime_status": {
+      "ok": true,
+      "detail": null
+    },
+    "gateway_serves_web": {
+      "ok": true,
+      "detail": null
+    },
+    "web_renders_device_data": {
+      "ok": true,
+      "detail": {
+        "domBytes": 49000,
+        "has041": true,
+        "hasBootId": true
+      }
+    },
+    "soak_240s_same_boot_monotonic": {
+      "ok": true,
+      "detail": {
+        "samples": 24,
+        "heapMin": 203936,
+        "heapMax": 203948,
+        "stackMin": 5348
+      }
+    },
+    "soak_clock_stays_synced": {
+      "ok": true,
+      "detail": null
+    },
+    "all_frames_schema_valid": {
+      "ok": true,
+      "detail": {
+        "frames": 411,
+        "types": {
+          "connection.hello": 1,
+          "rf.telemetry": 322,
+          "event": 1,
+          "connection.heartbeat": 65,
+          "system.status": 22
+        },
+        "errors": {}
+      }
+    },
+    "no_drops": {
+      "ok": true,
+      "detail": {
+        "droppedFrames": 0,
+        "droppedTelemetry": 0,
+        "rejectedMessages": 1
+      }
+    },
+    "same_boot": {
+      "ok": true,
+      "detail": null
+    }
+  },
+  "preSync": {
+    "fw": "0.3.1",
+    "httpApiVersion": "0.3.1",
+    "firmwareVersion": "0.4.1",
+    "realtimeVersion": "0.4.1",
+    "bootId": "6a02e9cbdaec77d8",
+    "resetReason": "POWERON",
+    "uptimeMs": 168107,
+    "clockSynced": false,
+    "clockSource": "none",
+    "clockSyncAgeMs": null,
+    "clientCount": 0,
+    "freeHeapBytes": 206060,
+    "minFreeHeapBytes": 206060,
+    "largestFreeBlockBytes": 163828,
+    "minLoopStackFreeBytes": 5624,
+    "heapSamples": 12,
+    "droppedFrames": 0,
+    "rejectedMessages": 0,
+    "droppedTelemetry": 0,
+    "skippedSimulatedEvents": 0,
+    "handshakeTimeouts": 0,
+    "idleTimeouts": 0,
+    "remoteCloses": 0
+  },
+  "postSync": {
+    "fw": "0.3.1",
+    "httpApiVersion": "0.3.1",
+    "firmwareVersion": "0.4.1",
+    "realtimeVersion": "0.4.1",
+    "bootId": "6a02e9cbdaec77d8",
+    "resetReason": "POWERON",
+    "uptimeMs": 173399,
+    "clockSynced": true,
+    "clockSource": "peer",
+    "clockSyncAgeMs": 233,
+    "clientCount": 1,
+    "freeHeapBytes": 206060,
+    "minFreeHeapBytes": 206060,
+    "largestFreeBlockBytes": 163828,
+    "minLoopStackFreeBytes": 5624,
+    "heapSamples": 12,
+    "droppedFrames": 0,
+    "rejectedMessages": 0,
+    "droppedTelemetry": 0,
+    "skippedSimulatedEvents": 0,
+    "handshakeTimeouts": 1,
+    "idleTimeouts": 0,
+    "remoteCloses": 0
+  },
+  "passive": {
+    "frames": {
+      "connection.hello": 1,
+      "connection.heartbeat": 16,
+      "system.status": 5,
+      "rf.telemetry": 75
+    },
+    "pings": 3,
+    "alive": true,
+    "error": null
+  },
+  "soak": [
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 265025,
+      "freeHeapBytes": 203948,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 147444,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 275038,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 285051,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 295061,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 305073,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 315084,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 325095,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 335107,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 345121,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 355174,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 365186,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 375200,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 385210,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 395222,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 405232,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 415252,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 425263,
+      "freeHeapBytes": 203936,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 435276,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 445288,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 455300,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 465313,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 475325,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 485337,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    },
+    {
+      "bootId": "6a02e9cbdaec77d8",
+      "uptimeMs": 495350,
+      "freeHeapBytes": 203944,
+      "minFreeHeapBytes": 200460,
+      "largestFreeBlockBytes": 155636,
+      "minLoopStackFreeBytes": 5348,
+      "clientCount": 1,
+      "droppedFrames": 0,
+      "droppedTelemetry": 0,
+      "clockSynced": true
+    }
+  ],
+  "final": {
+    "fw": "0.3.1",
+    "httpApiVersion": "0.3.1",
+    "firmwareVersion": "0.4.1",
+    "realtimeVersion": "0.4.1",
+    "bootId": "6a02e9cbdaec77d8",
+    "resetReason": "POWERON",
+    "uptimeMs": 495654,
+    "clockSynced": true,
+    "clockSource": "peer",
+    "clockSyncAgeMs": 7068,
+    "clientCount": 0,
+    "freeHeapBytes": 203944,
+    "minFreeHeapBytes": 200460,
+    "largestFreeBlockBytes": 155636,
+    "minLoopStackFreeBytes": 5348,
+    "heapSamples": 34,
+    "droppedFrames": 0,
+    "rejectedMessages": 1,
+    "droppedTelemetry": 0,
+    "skippedSimulatedEvents": 0,
+    "handshakeTimeouts": 1,
+    "idleTimeouts": 0,
+    "remoteCloses": 1
+  },
+  "gateway": {
+    "state": "disconnected",
+    "clockAuthority": true,
+    "lastSyncAt": "2026-11-22T00:10:16.441Z",
+    "lastError": null,
+    "reconnects": 0,
+    "framesReceived": 411,
+    "framesByType": {
+      "connection.hello": 1,
+      "rf.telemetry": 322,
+      "event": 1,
+      "connection.heartbeat": 65,
+      "system.status": 22
+    },
+    "deviceSessionId": "6a02e9cbdaec77d8-p0-2",
+    "uptimeS": 322.5,
+    "gatewayVersion": "0.1.0"
+  },
+  "finishedAt": "2026-11-22T00:10:24.029Z",
+  "allOk": true
+}
