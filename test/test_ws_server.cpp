@@ -450,5 +450,28 @@ int main() {
     assert(flood.connected());
   }
 
+  // Hardware regression (2026-11-21): the sync hello plus three periodic
+  // envelopes in the same loop overflowed a two-frame queue. With kTxDepth = 3
+  // the hello drains first and the burst of three fits without drops.
+  {
+    UtcClock burstClock;
+    ProtocolAdapter burstAdapter(burstClock);
+    RealtimeServer s;
+    s.begin(81, "bootburst", burstClock, burstAdapter, auth);
+    gPendingWiFiClients.clear();
+    WiFiClient gateway = connectClient(true);
+    finishHandshake(s, gateway, 90000);
+    gateway.push(maskedFrame(WsOpcode::Text, gatewayHello(1)));
+    s.loop(90002);
+    assert(burstClock.synced());
+    const std::string frame = "{\"type\":\"x\"}";
+    s.broadcast(frame.data(), frame.size());
+    s.broadcast(frame.data(), frame.size());
+    s.broadcast(frame.data(), frame.size());
+    s.loop(90003);
+    assert(s.droppedFrames() == 0);
+    assert(countOf(gateway.sent(), frame) == 3);
+  }
+
   std::puts("test_ws_server: ALL TESTS PASSED");
 }

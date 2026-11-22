@@ -78,6 +78,7 @@ void RealtimeCore::loop(uint32_t nowMs) {
   server_.loop(nowMs);
 
   if (!clock_.synced()) return;
+  if (!scheduleArmed_) armSchedule(nowMs);
 
   if (uint32_t(nowMs - lastRf_) >= kRfIntervalMs) {
     lastRf_ = nowMs;
@@ -106,6 +107,18 @@ void RealtimeCore::loop(uint32_t nowMs) {
     lastEventPoll_ = nowMs;
     publishEvents(nowMs);
   }
+}
+
+// Periodic producers start in distinct phases once time is available.
+// Without this, rf.telemetry, heartbeat and system.status all fired in the
+// same loop as the sync hello and overflowed the per-peer queue (one
+// droppedFrames observed on hardware, 2026-11-21).
+void RealtimeCore::armSchedule(uint32_t nowMs) {
+  scheduleArmed_ = true;
+  lastRf_ = nowMs - kRfIntervalMs + 100;
+  lastHeartbeat_ = nowMs - kHeartbeatIntervalMs + 350;
+  lastSystem_ = nowMs - 15000 + 600;
+  lastMotion_ = nowMs - 2000 + 850;
 }
 
 void RealtimeCore::sampleHeap(uint32_t nowMs) {
