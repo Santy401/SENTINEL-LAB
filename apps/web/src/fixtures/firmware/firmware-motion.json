@@ -1,0 +1,1 @@
+{"protocolVersion":"1.0.0","type":"motion.status","timestamp":"2026-11-21T16:10:03.600Z","sequence":7,"source":"esp32-s3-realtime","sessionId":"realtime-boot-0001","payload":{"deviceId":"iphone-12-sensorlogger-01","sourceType":"NativeClient","paired":true,"acceptedSamples":42,"lastSampleAgeMs":75,"lastHttpCode":200,"signalLost":false,"simulationRejected":3,"simulated":false}}

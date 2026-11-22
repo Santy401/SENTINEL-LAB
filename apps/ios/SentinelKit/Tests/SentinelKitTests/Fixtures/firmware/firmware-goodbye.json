@@ -1,0 +1,1 @@
+{"protocolVersion":"1.0.0","type":"connection.goodbye","timestamp":"2026-11-21T16:10:03.600Z","sequence":7,"source":"esp32-s3-realtime","sessionId":"realtime-boot-0001","payload":{"reason":"client-request"}}

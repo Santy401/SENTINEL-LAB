@@ -67,3 +67,11 @@ for node in workflow['nodes']:
 print('Python syntax and inactive n8n workflow syntax OK')
 
 run(['node','test/test_workflow.cjs'])
+
+# Host emulator: the real RealtimeServer over loopback TCP (not hardware).
+run(['g++','-std=c++17','-Wall','-Wextra','-Werror','-Iinclude','-Itest/posix_stubs',*ARDUINOJSON,
+     'test/host_device/main.cpp','src/realtime/ws_server.cpp','src/realtime/auth.cpp',
+     'src/realtime/frame_codec.cpp','src/realtime/handshake.cpp','src/realtime/protocol_adapter.cpp',
+     'src/realtime/session.cpp','src/realtime/time_source.cpp','-o','build/host_device'])
+run([sys.executable,'tools/tests/test_gateway.py','-v'])
+print('Gateway unit, HTTP and emulator integration tests OK')

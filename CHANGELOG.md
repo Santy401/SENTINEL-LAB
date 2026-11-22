@@ -8,6 +8,27 @@ SemVer cuando exista una release oficial.
 
 ### Added
 
+- Firmware realtime 0.4.1: plazo de handshake de 5 s (`408`), detección de FIN
+  sin Close, ping cada 20 s, códigos de cierre RFC 6455, cola de 3 tramas por
+  par, productores escalonados, rol `ios` autenticado como autoridad de tiempo,
+  re-sincronización por heartbeat y `sessionId` propiedad del cliente.
+- `/api/realtime/status`: `httpApiVersion`, `firmwareVersion`, `resetReason`,
+  `clockSource`, `clockSyncAgeMs`, `largestFreeBlockBytes`,
+  `minLoopStackFreeBytes`, `handshakeTimeouts`, `idleTimeouts`, `remoteCloses`.
+- Gateway local `tools/sentinel_gateway.py` y emulador `test/host_device`, que
+  ejecuta el `RealtimeServer` real sobre TCP.
+- Dashboard web `apps/web` con Arc Library (MIT).
+- App iPhone SwiftUI `apps/ios` y paquete SentinelKit; CI de Linux y macOS.
+- `tools/p2_stage_release.py`, `--release` en `p2_flash_authorized.sh` y
+  `tools/p3_hw_integration.py`.
+- ADR-0006, `docs/gateway.md`, `docs/hardware/update-esp32.md` y
+  `docs/validation/p3-integration.md` con evidencia física.
+
+### Fixed
+
+- Temporal de ~3 KiB en la pila del loop al cerrar un par.
+- Un `droppedFrames` al sincronizar el reloj, observado en placa.
+
 - Fundación del repositorio SENTINEL-LAB.
 - Gobernanza, plantillas GitHub y workflows base de CI.
 - Auditoría P0 e inventario del firmware funcional.

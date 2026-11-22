@@ -1,0 +1,1 @@
+{"protocolVersion":"1.0.0","type":"event","timestamp":"2026-11-21T16:10:03.600Z","sequence":7,"source":"esp32-s3-realtime","sessionId":"realtime-boot-0001","payload":{"eventId":"evt-0007","name":"SIGNAL_WEAK","occurredAt":"2026-11-21T16:10:03.500Z","simulated":false,"details":{"clientId":3,"rssiDbm":-87,"message":"RSSI below weak threshold"}}}

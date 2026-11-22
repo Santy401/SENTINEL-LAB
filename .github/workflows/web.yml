@@ -1,0 +1,49 @@
+name: Web dashboard
+
+on:
+  push:
+    paths:
+      - "apps/web/**"
+      - "packages/protocol/examples/**"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "packages/protocol/examples/**"
+      - ".github/workflows/web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit and render tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Report bundle size
+        run: du -ah dist | sort -h | tail -n 5

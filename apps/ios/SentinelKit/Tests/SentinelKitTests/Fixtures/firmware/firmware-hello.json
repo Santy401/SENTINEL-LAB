@@ -1,0 +1,1 @@
+{"protocolVersion":"1.0.0","type":"connection.hello","timestamp":"2026-11-21T16:10:02.100Z","sequence":7,"source":"esp32-s3-realtime","sessionId":"realtime-boot-0001","payload":{"deviceId":"sentinel-lab-01","role":"firmware","supportedVersion":"1.0.0","capabilities":["rf.monitor","motion.ingest"]}}

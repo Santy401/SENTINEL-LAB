@@ -42,18 +42,36 @@ The platform is designed around independent, reusable components:
 
 ## Development Status
 
-SENTINEL-LAB is under active development.
+| Component | Path | Status |
+|---|---|---|
+| Firmware HTTP v0.3.1 (`_rf`) | `src/rf`, `src/v02` | Unchanged, hardware tested |
+| SENTINEL Core realtime v0.4.1 (`_realtime`) | `src/realtime` | **Hardware tested** on the ESP32-S3 (18/18 checks, ~6.5 min run) |
+| Protocol v1 1.0.0 | `packages/protocol` | Schemas, validator, fixtures |
+| Gateway (time authority, web host, read-only proxy) | `tools/sentinel_gateway.py` | Host and hardware tested |
+| Web dashboard (React + [Arc Library](https://github.com/kuratlielia/arc-library)) | `apps/web` | Host tested; rendered against hardware via headless Chromium |
+| iPhone app (SwiftUI) + SentinelKit | `apps/ios` | Compiled in CI (simulator and unsigned device); **never run on an iPhone** |
 
-The current firmware supports HTTP-based monitoring, Wi-Fi RSSI measurements, motion ingestion, and experimental calibration.
+Installing the iPhone app requires macOS, Xcode and an Apple ID; no signed IPA
+exists. See [docs/ios/README.md](docs/ios/README.md).
 
-SENTINEL Core v0.4.0 adds bounded WebSocket telemetry in a separate `sentinel_esp32s3_n16r8_realtime` build. The stable v0.3.1 HTTP firmware is unchanged. The WebSocket transport is software-tested only; it has not been flashed or validated on hardware. A redesigned web interface, gateway services, and native applications remain planned.
+Key documents: [integration report](docs/validation/p3-integration.md),
+[realtime core](docs/realtime-core.md), [gateway](docs/gateway.md),
+[web](docs/web/README.md), [ESP32 update](docs/hardware/update-esp32.md),
+[full recovery](docs/hardware/p2-full-recovery.md),
+[ADR-0006](docs/decisions/ADR-0006-autoridad-de-tiempo-y-gateway.md).
 
-See [SENTINEL Core v0.4.0](docs/realtime-core.md), the [software validation report](docs/validation/p2-software.md), and the [portable P2 hardware kit](docs/hardware/p2-kit.md).
+### Quick start (lab network only)
 
-**P2 status:** Ready for authorized hardware flash — not yet flashed.
-Flash offsets and partition layout are documented in [p2-flash-layout.md](docs/hardware/p2-flash-layout.md); the guarded full-image recovery procedure is in [p2-full-recovery.md](docs/hardware/p2-full-recovery.md).
+```bash
+python3 tools/check_software.py                      # host tests
+(cd apps/web && npm ci && npm run build)             # web dashboard
+# join the SENTINEL-LAB access point, then:
+python3 tools/sentinel_gateway.py --token-file ~/.config/sentinel-lab/realtime-token
+# open http://127.0.0.1:8080
+```
 
-**Status:** Experimental — not production-ready.
+**Status:** Experimental — not production-ready. HTTP/WebSocket are unencrypted
+and intended only for the isolated laboratory AP.
 
 ## Technology
 
@@ -70,10 +88,11 @@ Flash offsets and partition layout are documented in [p2-flash-layout.md](docs/h
 - [x] HTTP API and initial dashboard
 - [x] Motion ingestion and RF experiments
 - [x] Versioned protocol contract
-- [x] Firmware WebSocket telemetry (v0.4.0, software-tested)
-- [ ] Next-generation web dashboard
-- [ ] Gateway and automation integration
-- [ ] Native application development
+- [x] Firmware WebSocket telemetry (v0.4.1, hardware-tested)
+- [x] Next-generation web dashboard (Arc Library)
+- [x] Local gateway (time authority, web host)
+- [ ] Native iPhone app on a physical device (built in CI, not installed)
+- [ ] Long-duration soak and automation integration
 
 ## Principles
 
