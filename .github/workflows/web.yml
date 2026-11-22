@@ -4,11 +4,15 @@ on:
   push:
     paths:
       - "apps/web/**"
+      - "web_assets/**"
+      - "tools/embed_web.py"
       - "packages/protocol/examples/**"
       - ".github/workflows/web.yml"
   pull_request:
     paths:
       - "apps/web/**"
+      - "web_assets/**"
+      - "tools/embed_web.py"
       - "packages/protocol/examples/**"
       - ".github/workflows/web.yml"
   workflow_dispatch:
@@ -44,6 +48,10 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      - name: Embedded firmware bundle matches this build
+        working-directory: .
+        run: python3 tools/embed_web.py --check
 
       - name: Report bundle size
         run: du -ah dist | sort -h | tail -n 5

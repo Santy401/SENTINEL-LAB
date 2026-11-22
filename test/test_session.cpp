@@ -203,6 +203,19 @@ int main() {
   assert(result.privileged);
   iosAuth.markPrivileged();
 
+  // role "web" follows the same rule as "ios".
+  SessionState webAnon;
+  webAnon.begin(3, "boot1234");
+  envelope = hello("web", kProtocolVersion, 1, "web-run-1", "web-dashboard");
+  result = validator.validate(envelope.data(), envelope.size(), 1000, false,
+                              webAnon);
+  assert(result.valid && !result.syncClock && !result.privileged);
+  SessionState webAuth;
+  webAuth.begin(3, "boot1234");
+  result = validator.validate(envelope.data(), envelope.size(), 1000, true,
+                              webAuth);
+  assert(result.valid && result.syncClock && result.privileged);
+
   // Authenticated heartbeat from the privileged session re-syncs the clock;
   // the same heartbeat from an unprivileged session never does.
   const char heartbeatTemplate[] =

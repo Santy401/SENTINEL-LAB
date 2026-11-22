@@ -42,8 +42,8 @@ int main() {
 
   assert(snapshotRealtimeHealth(view));
   assert(std::strcmp(view.fw, "0.3.1") == 0);
-  assert(std::strcmp(view.realtimeVersion, "0.4.1") == 0);
-  assert(std::strcmp(view.firmwareVersion, "0.4.1") == 0);
+  assert(std::strcmp(view.realtimeVersion, "0.4.2") == 0);
+  assert(std::strcmp(view.firmwareVersion, "0.4.2") == 0);
   assert(std::strcmp(view.httpApiVersion, "0.3.1") == 0);
   assert(std::strcmp(view.resetReason, "POWERON") == 0);
   assert(std::strcmp(view.clockSource, "none") == 0);
@@ -102,8 +102,8 @@ int main() {
 
   const std::string body = serializeView(view);
   const std::string expected =
-      R"({"fw":"0.3.1","httpApiVersion":"0.3.1","firmwareVersion":"0.4.1",)"
-      R"("realtimeVersion":"0.4.1","bootId":"rf-boot-id",)"
+      R"({"fw":"0.3.1","httpApiVersion":"0.3.1","firmwareVersion":"0.4.2",)"
+      R"("realtimeVersion":"0.4.2","bootId":"rf-boot-id",)"
       R"("resetReason":"POWERON","uptimeMs":45000,"clockSynced":false,)"
       R"("clockSource":"none","clockSyncAgeMs":null,"clientCount":2,)"
       R"("freeHeapBytes":50000,"minFreeHeapBytes":50000,)"

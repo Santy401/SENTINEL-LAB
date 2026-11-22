@@ -45,6 +45,16 @@ Restricciones:
 5. **iOS es autónomo**: con token en Keychain, la app sincroniza el reloj sin
    gateway; sin token, muestra el estado HTTP y explica por qué no hay stream.
 
+## Addendum v0.4.2 (2026-11-22)
+
+- La web compilada (`apps/web`) se incrusta en la imagen realtime con
+  `tools/embed_web.py` y `board_build.embed_files`, y se sirve en `/` (gzip,
+  ~239 KB). El panel v0.3.1 pasa a `/legacy` en esa imagen; `_rf` no cambia.
+- Un navegador puede ser autoridad de tiempo ofreciendo el subprotocolo
+  `sentinel.auth.<token>`. Con ello, el gateway deja de ser necesario para el uso
+  desde el móvil; sigue siendo útil para registrar evidencia y cuando ningún
+  cliente tiene token.
+
 ## Consecuencias
 
 - El ESP32 sigue funcionando sin ningún cliente: HTTP v0.3.1 intacto y el

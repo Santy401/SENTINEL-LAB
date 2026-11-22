@@ -473,5 +473,36 @@ int main() {
     assert(countOf(gateway.sent(), frame) == 3);
   }
 
+  // Browser time authority: token offered as subprotocol, role "web".
+  {
+    UtcClock webClock;
+    ProtocolAdapter webAdapter(webClock);
+    RealtimeServer s;
+    s.begin(81, "bootweb", webClock, webAdapter, auth);
+    gPendingWiFiClients.clear();
+    HandshakeOptions wrong;
+    wrong.protocol = "sentinel.v1, sentinel.auth.not-the-token";
+    WiFiClient intruder = connectClientWith(wrong);
+    HandshakeOptions browser;
+    browser.protocol = "sentinel.v1, sentinel.auth.local-token-123";
+    WiFiClient page = connectClientWith(browser);
+    s.loop(95000);
+    s.loop(95001);
+    s.loop(95002);
+    // Only sentinel.v1 is ever selected; the token is never echoed.
+    assert(page.sent().find("Sec-WebSocket-Protocol: sentinel.v1\r\n") !=
+           std::string::npos);
+    assert(page.sent().find("sentinel.auth") == std::string::npos);
+
+    std::string webHello = iosHello(1, "2026-11-21T16:10:02.100Z");
+    webHello.replace(webHello.find("\"ios\""), 5, "\"web\"");
+    intruder.push(maskedFrame(WsOpcode::Text, webHello));
+    s.loop(95003);
+    assert(!webClock.synced());
+    page.push(maskedFrame(WsOpcode::Text, webHello));
+    s.loop(95004);
+    assert(webClock.synced());
+  }
+
   std::puts("test_ws_server: ALL TESTS PASSED");
 }

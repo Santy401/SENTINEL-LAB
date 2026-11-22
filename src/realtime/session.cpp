@@ -203,15 +203,15 @@ InboundMessage InboundValidator::validate(const char* json, size_t length,
       }
       result.syncClock = true;
       result.privileged = true;
-    } else if (strcmp(role, "ios") == 0) {
-      // The native app is a time authority only when it presents the bearer
-      // token; without it, it is a read-only telemetry client.
+    } else if (strcmp(role, "ios") == 0 || strcmp(role, "web") == 0) {
+      // Native app and web dashboard are time authorities only when they
+      // present the token (bearer header or sentinel.auth subprotocol);
+      // without it they are read-only telemetry clients.
       if (authenticated) {
         result.syncClock = true;
         result.privileged = true;
       }
-    } else if (strcmp(role, "web") != 0 &&
-               strcmp(role, "sensor-client") != 0) {
+    } else if (strcmp(role, "sensor-client") != 0) {
       return reject(kInvalidEnvelopeCode, "invalid envelope");
     }
     snprintf(result.role, sizeof(result.role), "%s", role);

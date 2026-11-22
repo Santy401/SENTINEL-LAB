@@ -39,6 +39,12 @@ bool AuthGuard::verifyBearer(const char* header, size_t length) const {
   return equalConstantTime(header + prefixLength, token_, tokenLength);
 }
 
+bool AuthGuard::verifyToken(const char* token, size_t length) const {
+  if (!token_ || !*token_ || !token || length == 0) return false;
+  if (length != strlen(token_)) return false;
+  return equalConstantTime(token, token_, length);
+}
+
 bool AuthGuard::privilegedRole(const char* role) {
   return role && strcmp(role, "gateway") == 0;
 }

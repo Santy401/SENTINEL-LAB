@@ -161,7 +161,7 @@ function Dashboard() {
           <Diagnostics snapshot={snapshot} appVersion={APP_VERSION} />
         </TabsContent>
         <TabsContent value="settings">
-          <SettingsView settings={settings} onChange={setSettings} snapshot={snapshot} />
+          <SettingsView settings={settings} onChange={setSettings} snapshot={snapshot} onToken={token => sentinel.setToken(token)} />
         </TabsContent>
       </Tabs>
 

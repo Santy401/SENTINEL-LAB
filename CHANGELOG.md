@@ -8,6 +8,11 @@ SemVer cuando exista una release oficial.
 
 ### Added
 
+- Firmware realtime 0.4.2: la web Arc se sirve desde el ESP32 en `/` (gzip en
+  flash, `tools/embed_web.py`); el panel v0.3.1 pasa a `/legacy` en la imagen
+  realtime. Token aceptado como subprotocolo `sentinel.auth.<token>` y rol `web`
+  autenticado como autoridad de tiempo. La web añade el token en Ajustes.
+
 - Firmware realtime 0.4.1: plazo de handshake de 5 s (`408`), detección de FIN
   sin Close, ping cada 20 s, códigos de cierre RFC 6455, cola de 3 tramas por
   par, productores escalonados, rol `ios` autenticado como autoridad de tiempo,

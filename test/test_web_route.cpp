@@ -49,6 +49,27 @@ int main() {
   }
 
 #ifdef SENTINEL_REALTIME
+  // The embedded Arc dashboard owns "/", gzip-encoded; v0.3.1 page moved.
+  WebServer::Route* root = server.find("/");
+  assert(root != nullptr);
+  size_t rootRoutes = 0;
+  for (auto& route : server.routes) rootRoutes += route.path == "/";
+  assert(rootRoutes == 1);
+  root->handler();
+  assert(server.lastCode == 200);
+  assert(server.lastType == "text/html; charset=utf-8");
+  assert(server.lastBody == std::string("\x1f\x8bi", 3));
+  bool gzip = false, noCache = false;
+  for (auto& header : server.headers) {
+    gzip |= header == "Content-Encoding: gzip";
+    noCache |= header == "Cache-Control: no-cache";
+  }
+  assert(gzip && noCache);
+  server.headers.clear();
+  server.find("/assets/app.js")->handler();
+  assert(server.lastType == "text/javascript; charset=utf-8");
+  assert(server.find("/legacy") != nullptr);
+
   assert(health != nullptr);
   assert(health->method == WebServer::HTTP_GET);
 
@@ -60,8 +81,8 @@ int main() {
   assert(!deserializeJson(doc, server.lastBody));
   assert(doc.size() == 23);
   assert(std::string(doc["fw"]) == "0.3.1");
-  assert(std::string(doc["realtimeVersion"]) == "0.4.1");
-  assert(std::string(doc["firmwareVersion"]) == "0.4.1");
+  assert(std::string(doc["realtimeVersion"]) == "0.4.2");
+  assert(std::string(doc["firmwareVersion"]) == "0.4.2");
   assert(std::string(doc["httpApiVersion"]) == "0.3.1");
   assert(std::string(doc["resetReason"]) == "POWERON");
   assert(std::string(doc["clockSource"]) == "none");
@@ -80,6 +101,9 @@ int main() {
   std::puts("test_web_route (SENTINEL_REALTIME): ALL TESTS PASSED");
 #else
   assert(health == nullptr);
+  // The v0.3.1 image keeps its original dashboard at "/" and has no /legacy.
+  assert(server.find("/") != nullptr);
+  assert(server.find("/legacy") == nullptr);
   std::puts("test_web_route (production guard): ROUTE ABSENT, ALL TESTS PASSED");
 #endif
   return 0;

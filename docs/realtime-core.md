@@ -1,4 +1,4 @@
-# SENTINEL Core v0.4.1 — telemetría WebSocket local
+# SENTINEL Core v0.4.2 — telemetría WebSocket local y web embebida
 
 ## Estado
 
@@ -22,6 +22,8 @@ Este entorno extiende `_rf`, añade `src/realtime/*` y define
 |---|---:|---|---|
 | HTTP v0.3.1 | 80 | `/api/rf`, `/api/lab`, `/api/events`, etc. | Sin cambios |
 | HTTP de salud | 80 | `/api/realtime/status` | Nueva, solo en `_realtime` |
+| Web (Arc) | 80 | `/`, `/index.html`, `/assets/app.{js,css}` | Desde v0.4.2, gzip desde flash |
+| Panel v0.3.1 | 80 | `/legacy` | Respaldo; en `_rf` sigue en `/` |
 | WebSocket | 81 | `/realtime` | Desde v0.4.0; ciclo de vida endurecido en v0.4.1 |
 
 El endpoint solo escucha en el AP local de laboratorio. El handshake exige
@@ -212,10 +214,15 @@ Autoridad de tiempo: un `hello` con rol `gateway` **o** `ios` sobre un handshake
 con `Authorization: Bearer <token>` válido sincroniza el reloj con su
 `timestamp`; los `connection.heartbeat` de esa misma sesión lo re-sincronizan.
 Un `gateway` sin token recibe `UNAUTHORIZED`. Los roles `web`, `sensor-client` e
-`ios` sin token son clientes de solo lectura y nunca mueven el reloj. Los
-navegadores no pueden enviar `Authorization` en un WebSocket, así que la web es
-siempre de solo lectura y depende del gateway (`tools/sentinel_gateway.py`) o
-de la app iOS para la hora.
+`ios` sin token son clientes de solo lectura y nunca mueven el reloj.
+
+Desde v0.4.2 el token también se acepta como subprotocolo ofrecido
+`sentinel.auth.<token>` junto a `sentinel.v1`, porque los navegadores no pueden
+enviar `Authorization` en un WebSocket. El servidor solo selecciona
+`sentinel.v1`, nunca devuelve el token, y el rol `web` autenticado sincroniza el
+reloj igual que `ios`. Así, un móvil con solo el navegador, conectado a
+`SENTINEL-LAB` y con el token guardado en Ajustes, pone en hora el ESP32 sin
+gateway. El token viaja sin cifrar: solo vale dentro de la red del laboratorio.
 El firmware valida la línea de petición exacta, los tokens `websocket` y
 `upgrade`, una clave base64 canónica de 16 bytes, `Sec-WebSocket-Version: 13` y
 el token exacto `sentinel.v1` en `Sec-WebSocket-Protocol`. Una petición con otra

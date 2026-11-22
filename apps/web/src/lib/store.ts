@@ -25,6 +25,7 @@ import type {
   SystemStatusPayload,
   ErrorPayload,
 } from "./protocol";
+import { defaultWsUrl, loadToken, saveToken, validToken } from "./token";
 import { RealtimeClient, type ClientStats, type SocketState } from "./realtime-client";
 import { Ring } from "./ring";
 
@@ -61,6 +62,8 @@ export interface Snapshot {
   demo: boolean;
   wsUrl: string;
   gatewayVersion: string | null;
+  /** A realtime token is stored in this browser (value never exposed). */
+  tokenConfigured: boolean;
   configResolved: boolean;
   socketState: SocketState | "demo";
   clientStats: ClientStats | null;
@@ -117,6 +120,7 @@ export class SentinelStore {
   private readonly heap = new Ring<{ at: number; free: number }>(HEAP_POINTS);
   private readonly seenEvents = new Set<string>();
   private running = false;
+  private token: string | null = loadToken();
 
   constructor(settings: Settings) {
     this.snapshot = {
@@ -124,6 +128,7 @@ export class SentinelStore {
       demo: settings.demo,
       wsUrl: DEFAULT_WS_URL,
       gatewayVersion: null,
+      tokenConfigured: this.token !== null,
       configResolved: false,
       socketState: settings.demo ? "demo" : "idle",
       clientStats: null,
@@ -198,6 +203,25 @@ export class SentinelStore {
     this.abort = null;
   }
 
+  hasToken(): boolean {
+    return this.token !== null;
+  }
+
+  /** Stores (or clears) the realtime token and reconnects so it takes effect. */
+  setToken(token: string | null): void {
+    this.token = token && validToken(token) ? token : null;
+    saveToken(this.token);
+    this.set({ tokenConfigured: this.token !== null });
+    if (this.running && !this.snapshot.settings.demo) {
+      this.client?.stop();
+      this.client = null;
+      this.running = false;
+      this.start();
+    }
+    this.notify({ type: "info", title: this.token ? "Token guardado" : "Token eliminado",
+      description: this.token ? "Este navegador sincronizará el reloj del ESP32 al conectar." : "Cliente de solo lectura." });
+  }
+
   updateSettings(settings: Settings): void {
     const modeChanged = settings.demo !== this.snapshot.settings.demo;
     if (modeChanged) {
@@ -243,7 +267,7 @@ export class SentinelStore {
   // ---------------------------------------------------------------- live mode
 
   private async startLive(): Promise<void> {
-    let wsUrl = DEFAULT_WS_URL;
+    let wsUrl = defaultWsUrl(typeof window === "undefined" ? null : window.location, DEFAULT_WS_URL);
     let gatewayVersion: string | null = null;
     try {
       const config = await getJson("gateway/config", parseGatewayConfig, { timeoutMs: 2500 });
@@ -256,6 +280,7 @@ export class SentinelStore {
     this.set({ wsUrl, gatewayVersion, configResolved: true });
     this.client = new RealtimeClient({
       url: wsUrl,
+      token: () => this.token,
       onMessage: message => this.ingest(message, Date.now()),
       onState: state => this.handleSocketState(state),
       onStats: stats => this.set({ clientStats: stats }),

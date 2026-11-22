@@ -1,3 +1,4 @@
+import { subprotocols } from "./token";
 import { Backoff } from "./backoff";
 import { OutboundSession, SUBPROTOCOL, parseServerFrame, randomId, type ProtocolMessage } from "./protocol";
 
@@ -48,6 +49,8 @@ export interface ClientStats {
 
 export interface RealtimeClientOptions {
   url: string;
+  /** Returns the current realtime token (offered as a subprotocol) or null. */
+  token?: () => string | null;
   createSocket?: (url: string, protocols: string[]) => SocketLike;
   scheduler?: Scheduler;
   random?: () => number;
@@ -154,7 +157,7 @@ export class RealtimeClient {
     this.setState("connecting");
     let socket: SocketLike;
     try {
-      socket = this.createSocket(this.options.url, [SUBPROTOCOL]);
+      socket = this.createSocket(this.options.url, subprotocols(SUBPROTOCOL, this.options.token?.() ?? null));
     } catch {
       this.scheduleReconnect();
       return;
