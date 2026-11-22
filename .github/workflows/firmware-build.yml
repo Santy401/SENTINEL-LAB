@@ -31,7 +31,7 @@ jobs:
           - sentinel_esp32s3_n16r8_realtime
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Prepare placeholder Wi-Fi config
         run: cp include/secrets.example.h include/secrets.h
