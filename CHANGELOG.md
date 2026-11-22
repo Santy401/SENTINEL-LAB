@@ -8,6 +8,16 @@ SemVer cuando exista una release oficial.
 
 ### Added
 
+- Firmware realtime 0.5.0: motor RGB del WS2812 (GPIO48) reactivo al movimiento
+  del iPhone, `motion.sample` entrante de sesiones autenticadas y reenvío a la
+  web, campos `rgb` y `phoneMotion` en `/api/realtime/status`. Validado en placa
+  (`docs/validation/p3-artifacts/hw-v050-motion-rgb.json`); el encendido
+  visible del LED físico queda pendiente de confirmación del propietario.
+- App iOS 1.1.0: pestaña Movimiento (agitación, fuerza estimada, 3D), distancia
+  al ESP32 con calibración guiada y LED virtual. Token también como subprotocolo.
+- Web 0.2.0: modelo 3D original del ESP32-S3, radar, analizador de movimiento,
+  experimentos y modo exhibición.
+
 - Firmware realtime 0.4.2: la web Arc se sirve desde el ESP32 en `/` (gzip en
   flash, `tools/embed_web.py`); el panel v0.3.1 pasa a `/legacy` en la imagen
   realtime. Token aceptado como subprotocolo `sentinel.auth.<token>` y rol `web`
