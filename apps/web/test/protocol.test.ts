@@ -30,13 +30,14 @@ describe("Protocol v1 contract examples", () => {
 
 describe("firmware-generated frames", () => {
   const frames = read(firmwareFixturesDir);
-  it("has all eight firmware fixtures", () => {
+  it("has all nine firmware fixtures (incl. relayed motion.sample)", () => {
     expect(frames.map(f => f.name).sort()).toEqual([
       "firmware-error.json",
       "firmware-event.json",
       "firmware-goodbye.json",
       "firmware-heartbeat.json",
       "firmware-hello.json",
+      "firmware-motion-sample.json",
       "firmware-motion.json",
       "firmware-rf.json",
       "firmware-system.json",

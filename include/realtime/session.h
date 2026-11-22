@@ -1,5 +1,6 @@
 #pragma once
 
+#include "realtime/phone_motion.h"
 #include "realtime/time_source.h"
 
 #include <stddef.h>
@@ -29,6 +30,16 @@ struct InboundMessage {
   // with a valid bearer token). Unauthenticated peers never move the clock.
   bool syncClock = false;
   bool privileged = false;
+  // motion.sample (authenticated phone only); vectors in m/s².
+  bool isMotion = false;
+  char motionDeviceId[65]{};
+  char motionSourceType[16]{};
+  char motionState[16]{};
+  char motionSensorTimestamp[25]{};
+  uint64_t motionSampleIndex = 0;
+  MotionVector acceleration;
+  MotionVector gravity;
+  MotionVector linear;
 };
 
 // Per-connection identity and outbound sequence. The triple source +

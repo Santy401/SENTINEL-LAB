@@ -4,9 +4,63 @@ Panel de laboratorio de nueva generación para el ESP32-S3, en `apps/web/`.
 Sustituye como interfaz principal de diagnóstico a las páginas HTML embebidas
 en el firmware; estas siguen intactas en `http://192.168.4.1/` (API v0.3.1).
 
-**Estado:** implementado, compilado y probado en host (typecheck, 82 tests de
-Vitest, build de producción). **No se ha probado en un navegador real contra el
-ESP32 físico** ni con el gateway: es la siguiente validación pendiente.
+**Estado (web 0.2.0, laboratorio físico):** implementado, compilado y probado en
+host: typecheck, 120 tests de Vitest, build y capturas con Chromium headless
+(WebGL por SwiftShader) a 1440 × 1000 y 390 × 844 **sin dispositivo**. Las
+vistas nuevas no se han probado todavía con el firmware 0.5.0 en placa: LED
+RGB, `motion.sample` retransmitido y `phoneMotion`. Esa es la validación física
+pendiente.
+
+## Laboratorio físico (web 0.2.0)
+
+| Vista | Qué muestra | Origen de los datos |
+|---|---|---|
+| **Laboratorio** | Modelo 3D interactivo de la ESP32-S3-DevKitC-1 (N16R8) como protagonista, instrumentos (firmware, reloj, memoria, señal, agitación del iPhone, clientes) y LED RGB virtual | `/api/realtime/status` (`rgb`, `phoneMotion`), WebSocket |
+| **Radar** | ESP32 en el centro, anillos de RSSI, ondas, clientes, historial, alcance teórico y distancias calibradas | `rf.telemetry` (WS) o `/api/rf` (HTTP) |
+| **Movimiento** | Intensidad de agitación, \|a\| en m/s² y g, fuerza estimada F = m·a, gráficas por eje, crudo/filtrado (EMA), picos, estadística, frecuencia de muestreo e inclinación 3D | `motion.sample` retransmitido por el ESP32 (≤ 5 Hz); resumen `phoneMotion` |
+| **Experimentos** | Gravedad y orientación, Movimiento, Cobertura Wi-Fi (API de laboratorio), Respuesta RGB (latencia), Estabilidad; inicio/parada, gráficas y exportación CSV/JSON | Store en vivo; `POST /api/experiments`, `/api/measurements` y `/api/calibration` |
+| **Exhibición** (botón de cabecera) | Recorrido a pantalla completa en 8 pasos para público no técnico, con datos en vivo | Igual que las vistas |
+
+Rigor de los datos:
+- **Radar:** la posición angular **no se mide**; es un ángulo estable derivado
+  del identificador. El radio sí es la intensidad medida. Los anillos de alcance
+  usan un modelo log-distancia conceptual (A = −40 dBm a 1 m, n seleccionable,
+  umbral −90 dBm). Solo se muestran distancias como «calibradas» si el firmware
+  las marca `calibrated`.
+- **Movimiento:**
+  - La aceleración es medida por CoreMotion en el iPhone.
+  - La inclinación se deriva de la gravedad y no incluye el rumbo (yaw).
+  - La fuerza es una estimación con la masa nominal del iPhone 12 (164 g).
+  - No se calcula velocidad ni desplazamiento.
+- **Latencia RGB:** es una cota superior limitada por el intervalo de sondeo
+  HTTP.
+- **DEMO:** genera también movimiento y estado RGB sintéticos, etiquetados como
+  DEMO en la interfaz y en las exportaciones.
+
+### Modelo 3D de la placa
+
+No se encontró un GLB/glTF con licencia verificable que corresponda a la
+DevKitC-1 N16R8. La librería KiCad de Espressif (`espressif/kicad-libraries`,
+licencia propia) ofrece modelos STEP de módulos, que habría que convertir y
+revisar legalmente.
+
+Por eso el modelo es **original y procedural**:
+- Archivos: `src/three/board-model.ts` y metadatos en `src/lib/board-parts.ts`.
+- Dimensiones públicas: PCB 63 × 25,4 × 1,6 mm, módulo WROOM-1 de
+  18 × 25,5 × 3,1 mm, 2 × 22 pines a 2,54 mm.
+- Las posiciones de USB-C, BOOT/RST, LDO, puente USB-serie y LED WS2812
+  (GPIO48) son aproximadas.
+- Materiales PBR con mapa de entorno `RoomEnvironment`, sombras suaves y
+  resolución adaptativa (baja el *pixel ratio* tras fotogramas lentos).
+- Raycasting para seleccionar componentes; el LED emisivo replica
+  `status.rgb`; pulso de propagación ante eventos.
+- Movimiento reducido: sin autorrotación ni pulsos.
+- Sin WebGL hay una vista SVG estática interactiva que nunca bloquea la
+  interfaz. three.js 0.187.0 (MIT).
+
+Las importaciones dinámicas se integran en un **único bundle**
+(`inlineDynamicImports`), porque el firmware sirve exactamente
+`/assets/app.js` y `/assets/app.css` (`tools/embed_web.py`).
 
 ## Arquitectura
 

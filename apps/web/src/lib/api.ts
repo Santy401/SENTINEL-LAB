@@ -18,6 +18,69 @@ function need<T>(value: T | null, field: string): T {
 
 export type ClockSource = "none" | "ntp" | "peer";
 
+export type RgbMode = "boot" | "offline" | "client" | "synced" | "motion" | "event";
+export const RGB_MODES: readonly RgbMode[] = ["boot", "offline", "client", "synced", "motion", "event"];
+
+/** Physical WS2812 state reported by firmware ≥ 0.5.0 (absent before). */
+export interface RgbStatus {
+  enabled: boolean;
+  pin: number | null;
+  mode: RgbMode | null;
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** iPhone motion as last accepted by the firmware (≥ 0.5.0). */
+export interface PhoneMotionStatus {
+  active: boolean;
+  deviceId: string | null;
+  linearAccelMs2: number | null;
+  intensity: number | null;
+  peakMs2: number | null;
+  samples: number | null;
+  sampleAgeMs: number | null;
+}
+
+const byte = (v: unknown): number | null => {
+  const n = numOr(v);
+  return n !== null && Number.isInteger(n) && n >= 0 && n <= 255 ? n : null;
+};
+
+export function parseRgbStatus(value: unknown): RgbStatus | null {
+  if (!isObj(value)) return null;
+  const r = byte(value.r);
+  const g = byte(value.g);
+  const b = byte(value.b);
+  const enabled = boolOr(value.enabled);
+  if (r === null || g === null || b === null || enabled === null) return null;
+  const mode = strOr(value.mode);
+  return {
+    enabled,
+    pin: numOr(value.pin),
+    mode: mode && (RGB_MODES as readonly string[]).includes(mode) ? (mode as RgbMode) : null,
+    r,
+    g,
+    b,
+  };
+}
+
+export function parsePhoneMotion(value: unknown): PhoneMotionStatus | null {
+  if (!isObj(value)) return null;
+  const active = boolOr(value.active);
+  if (active === null) return null;
+  const intensity = numOr(value.intensity);
+  return {
+    active,
+    deviceId: strOr(value.deviceId),
+    linearAccelMs2: numOr(value.linearAccelMs2),
+    intensity: intensity === null ? null : Math.min(1, Math.max(0, intensity)),
+    peakMs2: numOr(value.peakMs2),
+    samples: numOr(value.samples),
+    sampleAgeMs: numOr(value.sampleAgeMs),
+  };
+}
+
 export interface RealtimeStatus {
   fw: string;
   httpApiVersion: string | null;
@@ -42,6 +105,8 @@ export interface RealtimeStatus {
   handshakeTimeouts: number | null;
   idleTimeouts: number | null;
   remoteCloses: number | null;
+  rgb: RgbStatus | null;
+  phoneMotion: PhoneMotionStatus | null;
 }
 
 export function parseRealtimeStatus(value: unknown): RealtimeStatus {
@@ -71,6 +136,8 @@ export function parseRealtimeStatus(value: unknown): RealtimeStatus {
     handshakeTimeouts: numOr(value.handshakeTimeouts),
     idleTimeouts: numOr(value.idleTimeouts),
     remoteCloses: numOr(value.remoteCloses),
+    rgb: parseRgbStatus(value.rgb),
+    phoneMotion: parsePhoneMotion(value.phoneMotion),
   };
 }
 
@@ -261,4 +328,82 @@ export async function getJson<T>(path: string, parse: (v: unknown) => T, options
     clearTimeout(timer);
     options.signal?.removeEventListener("abort", onAbort);
   }
+}
+
+// ------------------------------------------------------------- lab API (POST)
+// Write routes exist only on the ESP32 itself (the gateway proxy is read-only
+// and answers 405). They are unauthenticated: laboratory AP only.
+
+export interface LabExperiment {
+  id: number;
+  name: string;
+  clientId: number;
+  environment: number;
+  calibrated: boolean;
+  n: number | null;
+  referenceRssi: number | null;
+  currentEstimateM: number | null;
+}
+
+export interface LabMeasurement {
+  experimentId: number;
+  clientId: number;
+  actualM: number | null;
+  rssi: number | null;
+  filtered: number | null;
+  calibration: boolean;
+  estimatedM: number | null;
+  errorM: number | null;
+}
+
+export interface LabSnapshot {
+  experiments: LabExperiment[];
+  measurements: LabMeasurement[];
+}
+
+export function parseLab(value: unknown): LabSnapshot {
+  if (!isObj(value)) throw new ApiShapeError("expected object");
+  const experiments = Array.isArray(value.experiments) ? value.experiments : [];
+  const measurements = Array.isArray(value.measurements) ? value.measurements : [];
+  return {
+    experiments: experiments.filter(isObj).map(e => ({
+      id: need(numOr(e.id), "experiments.id"),
+      name: strOr(e.name) ?? "",
+      clientId: numOr(e.clientId) ?? 0,
+      environment: numOr(e.environment) ?? 0,
+      calibrated: boolOr(e.calibrated) ?? false,
+      n: numOr(e.n),
+      referenceRssi: numOr(e.referenceRssi),
+      currentEstimateM: numOr(e.currentEstimateM),
+    })),
+    measurements: measurements.filter(isObj).map(m => ({
+      experimentId: numOr(m.experimentId) ?? 0,
+      clientId: numOr(m.clientId) ?? 0,
+      actualM: numOr(m.actualM),
+      rssi: numOr(m.rssiDbm),
+      filtered: numOr(m.filteredDbm),
+      calibration: boolOr(m.calibration) ?? false,
+      estimatedM: numOr(m.estimatedM),
+      errorM: numOr(m.errorM),
+    })),
+  };
+}
+
+export async function postJson(path: string, body: unknown, fetchImpl: typeof fetch = fetch): Promise<unknown> {
+  const response = await fetchImpl(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+  if (!response.ok) {
+    const message = isObj(payload) && typeof payload.error === "string" ? payload.error : `HTTP ${response.status}`;
+    throw new HttpError(response.status, response.status === 405 ? "Escritura no disponible a través del gateway (solo lectura): abra la web desde http://192.168.4.1/" : message);
+  }
+  return payload;
 }

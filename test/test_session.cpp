@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -215,6 +216,43 @@ int main() {
   result = validator.validate(envelope.data(), envelope.size(), 1000, true,
                               webAuth);
   assert(result.valid && result.syncClock && result.privileged);
+
+  // motion.sample: only from the authenticated privileged phone session.
+  auto motion = [](uint64_t seq, const char* extra) {
+    std::string s =
+        "{\"protocolVersion\":\"1.0.0\",\"type\":\"motion.sample\","
+        "\"timestamp\":\"2026-11-21T16:10:07.100Z\",\"sequence\":" +
+        std::to_string(seq) +
+        ",\"source\":\"ios-app\",\"sessionId\":\"ios-run-1\",\"payload\":{"
+        "\"deviceId\":\"iphone-0a1b2c3d\",\"sourceType\":\"CoreMotion\","
+        "\"sampleIndex\":7,\"sensorTimestamp\":\"2026-11-21T16:10:07.050Z\","
+        "\"acceleration\":{\"x\":1.5,\"y\":-9.7,\"z\":0.2},"
+        "\"gravity\":{\"x\":0.1,\"y\":-9.8,\"z\":0.0},"
+        "\"linearAcceleration\":{\"x\":1.4,\"y\":0.1,\"z\":0.2},"
+        "\"state\":\"MOVEMENT\",\"simulated\":false" + std::string(extra) + "}}";
+    return s;
+  };
+  std::string ms = motion(10, "");
+  result = validator.validate(ms.data(), ms.size(), 1000, true, iosAuth);
+  assert(result.valid && result.isMotion);
+  assert(std::strcmp(result.motionDeviceId, "iphone-0a1b2c3d") == 0);
+  // ArduinoJson keeps these decimals in float32: compare with tolerance.
+  assert(std::fabs(result.linear.x - 1.4) < 1e-5 && std::fabs(result.gravity.y + 9.8) < 1e-5);
+  assert(result.motionSampleIndex == 7);
+  ms = motion(11, "");
+  result = validator.validate(ms.data(), ms.size(), 1000, false, iosAnon);
+  assert(!result.valid && result.errorCode == kUnauthorizedCode);
+  ms = motion(12, ",\"extra\":1");
+  result = validator.validate(ms.data(), ms.size(), 1000, true, iosAuth);
+  assert(!result.valid && result.errorCode == kInvalidEnvelopeCode);
+  ms = motion(13, "");
+  ms.replace(ms.find("\"simulated\":false"), 17, "\"simulated\":true ");
+  result = validator.validate(ms.data(), ms.size(), 1000, true, iosAuth);
+  assert(!result.valid);
+  ms = motion(14, "");
+  ms.replace(ms.find("1.4"), 3, "999");
+  result = validator.validate(ms.data(), ms.size(), 1000, true, iosAuth);
+  assert(!result.valid);
 
   // Authenticated heartbeat from the privileged session re-syncs the clock;
   // the same heartbeat from an unprivileged session never does.

@@ -40,9 +40,16 @@ final class RealtimeTransport: NSObject, URLSessionWebSocketDelegate, @unchecked
             return
         }
         var request = URLRequest(url: url, timeoutInterval: 10)
-        request.setValue(websocketSubprotocol, forHTTPHeaderField: "Sec-WebSocket-Protocol")
         if let token, !token.isEmpty {
+            // URLSession treats Authorization as a reserved header and may
+            // drop it on WebSocket upgrades. The firmware (>= 0.4.2) also
+            // accepts the token offered as a second subprotocol; it only ever
+            // selects sentinel.v1 and never echoes the token.
+            request.setValue("\(websocketSubprotocol), sentinel.auth.\(token)",
+                             forHTTPHeaderField: "Sec-WebSocket-Protocol")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue(websocketSubprotocol, forHTTPHeaderField: "Sec-WebSocket-Protocol")
         }
 
         let configuration = URLSessionConfiguration.ephemeral

@@ -15,5 +15,13 @@ export default defineConfig({
       "/api": { target: device, changeOrigin: true },
     },
   },
-  build: { outDir: "dist", sourcemap: false, chunkSizeWarningLimit: 900 },
+  // The ESP32 serves exactly one script and one stylesheet (tools/embed_web.py,
+  // firmware routes /assets/app.{js,css}), so dynamic imports (the three.js
+  // board scene) are inlined into the single bundle instead of a second chunk.
+  build: {
+    outDir: "dist",
+    sourcemap: false,
+    chunkSizeWarningLimit: 1400,
+    rolldownOptions: { output: { inlineDynamicImports: true } },
+  },
 });

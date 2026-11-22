@@ -42,8 +42,8 @@ int main() {
 
   assert(snapshotRealtimeHealth(view));
   assert(std::strcmp(view.fw, "0.3.1") == 0);
-  assert(std::strcmp(view.realtimeVersion, "0.4.3") == 0);
-  assert(std::strcmp(view.firmwareVersion, "0.4.3") == 0);
+  assert(std::strcmp(view.realtimeVersion, "0.5.0") == 0);
+  assert(std::strcmp(view.firmwareVersion, "0.5.0") == 0);
   assert(std::strcmp(view.httpApiVersion, "0.3.1") == 0);
   assert(std::strcmp(view.resetReason, "POWERON") == 0);
   assert(std::strcmp(view.clockSource, "none") == 0);
@@ -102,15 +102,20 @@ int main() {
 
   const std::string body = serializeView(view);
   const std::string expected =
-      R"({"fw":"0.3.1","httpApiVersion":"0.3.1","firmwareVersion":"0.4.3",)"
-      R"("realtimeVersion":"0.4.3","bootId":"rf-boot-id",)"
+      R"({"fw":"0.3.1","httpApiVersion":"0.3.1","firmwareVersion":"0.5.0",)"
+      R"("realtimeVersion":"0.5.0","bootId":"rf-boot-id",)"
       R"("resetReason":"POWERON","uptimeMs":45000,"clockSynced":false,)"
       R"("clockSource":"none","clockSyncAgeMs":null,"clientCount":2,)"
       R"("freeHeapBytes":50000,"minFreeHeapBytes":50000,)"
       R"("largestFreeBlockBytes":25000,"minLoopStackFreeBytes":4096,)"
       R"("heapSamples":4,"droppedFrames":3,"rejectedMessages":4,)"
       R"("droppedTelemetry":0,"skippedSimulatedEvents":0,)"
-      R"("handshakeTimeouts":0,"idleTimeouts":0,"remoteCloses":0})";
+      R"("handshakeTimeouts":0,"idleTimeouts":0,"remoteCloses":0,)"
+      R"("rgb":{"enabled":true,"pin":48,"mode":"client","r":)" +
+      std::to_string(view.rgbR) + R"(,"g":)" + std::to_string(view.rgbG) +
+      R"(,"b":)" + std::to_string(view.rgbB) + R"(},)"
+      R"("phoneMotion":{"active":false,"deviceId":null,"sampleAgeMs":null,)"
+      R"("linearAccelMs2":0,"intensity":0,"peakMs2":0,"samples":0}})";
   if (body != expected) {
     std::printf("health JSON mismatch:\n  actual:   %s\n  expected: %s\n",
                 body.c_str(), expected.c_str());

@@ -2,7 +2,9 @@
 
 #include "realtime/auth.h"
 #include "realtime/event_bridge.h"
+#include "realtime/phone_motion.h"
 #include "realtime/protocol_adapter.h"
+#include "realtime/rgb_engine.h"
 #include "realtime/time_source.h"
 #include "realtime/ws_server.h"
 
@@ -32,6 +34,8 @@ class RealtimeCore {
   uint32_t largestFreeBlockBytes() const { return largestFreeBlockBytes_; }
   uint32_t minLoopStackFreeBytes() const { return minLoopStackFreeBytes_; }
   const UtcClock& clock() const { return clock_; }
+  const PhoneMotion& phoneMotion() const { return phone_; }
+  const RgbEngine& rgb() const { return rgb_; }
   const RealtimeServer& server() const { return server_; }
 
  private:
@@ -42,6 +46,10 @@ class RealtimeCore {
   static constexpr uint32_t kHeapSampleIntervalMs = 15000;
 
   void armSchedule(uint32_t nowMs);
+  static void onMotion(void* context, const InboundMessage& message,
+                       uint32_t nowMs);
+  void relayMotion(uint32_t nowMs);
+  void updateRgb(uint32_t nowMs);
   void sampleHeap(uint32_t nowMs);
   void tryNtpSync(uint32_t nowMs);
   void publishRf(uint32_t nowMs);
@@ -72,6 +80,19 @@ class RealtimeCore {
   char message_[kProtocolMessageBytes]{};
   bool eventBridgeStarted_ = false;
   bool scheduleArmed_ = false;
+  static constexpr uint32_t kMotionRelayMs = 200;
+  static constexpr uint32_t kRgbFrameMs = 20;
+  PhoneMotion phone_;
+  RgbEngine rgb_;
+  uint32_t lastRgbFrame_ = 0;
+  uint32_t lastRelay_ = 0;
+  bool relayPending_ = false;
+  // Copy of the latest validated sample for the relay (fixed buffers).
+  char relayDeviceId_[65]{};
+  char relaySource_[16]{};
+  char relayState_[16]{};
+  char relaySensorTs_[25]{};
+  MotionSampleView relay_;
   uint32_t droppedTelemetry_ = 0;
   uint32_t skippedSimulatedEvents_ = 0;
 };

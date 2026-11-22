@@ -19,7 +19,10 @@ import { demoFrames, demoStatus } from "./demo";
 import { evaluateHealth, type HealthIndicator } from "./health";
 import type {
   EventPayload,
+  MotionSamplePayload,
+  MotionState,
   MotionStatusPayload,
+  Vector3,
   ProtocolMessage,
   RfTelemetryPayload,
   SystemStatusPayload,
@@ -48,6 +51,26 @@ export interface TimelineItem {
   rssiDbm: number | null;
   message: string | null;
   origin: "websocket" | "http" | "local";
+}
+
+/** One phone motion sample relayed by the ESP32 (or DEMO). */
+export interface MotionPoint {
+  at: number;
+  deviceId: string;
+  sampleIndex: number;
+  linear: Vector3;
+  gravity: Vector3;
+  linearMs2: number;
+  state: MotionState;
+}
+
+/** A change of the physical RGB LED as observed by HTTP polling. */
+export interface RgbChange {
+  at: number;
+  mode: string | null;
+  r: number;
+  g: number;
+  b: number;
 }
 
 export interface FrameRecord {
@@ -86,6 +109,9 @@ export interface Snapshot {
   frames: FrameRecord[];
   frameCounts: Record<string, number>;
   heapHistory: { at: number; free: number }[];
+  motionSamples: MotionPoint[];
+  lastMotion: MotionSamplePayload | null;
+  rgbLog: RgbChange[];
   health: HealthIndicator[];
   loading: boolean;
 }
@@ -96,6 +122,9 @@ const HISTORY_POINTS = 120;
 const TIMELINE_ITEMS = 100;
 const FRAME_RECORDS = 40;
 const HEAP_POINTS = 120;
+/** 60 s of phone motion at 5 Hz. */
+const MOTION_POINTS = 300;
+const RGB_CHANGES = 60;
 
 function describe(error: unknown): string {
   if (error instanceof HttpError) return `HTTP ${error.status}`;
@@ -118,6 +147,8 @@ export class SentinelStore {
   private readonly timeline = new Ring<TimelineItem>(TIMELINE_ITEMS);
   private readonly frames = new Ring<FrameRecord>(FRAME_RECORDS);
   private readonly heap = new Ring<{ at: number; free: number }>(HEAP_POINTS);
+  private readonly motionRing = new Ring<MotionPoint>(MOTION_POINTS);
+  private readonly rgbRing = new Ring<RgbChange>(RGB_CHANGES);
   private readonly seenEvents = new Set<string>();
   private running = false;
   private token: string | null = loadToken();
@@ -151,6 +182,9 @@ export class SentinelStore {
       frames: [],
       frameCounts: {},
       heapHistory: [],
+      motionSamples: [],
+      lastMotion: null,
+      rgbLog: [],
       health: [],
       loading: true,
     };
@@ -240,6 +274,8 @@ export class SentinelStore {
     this.timeline.clear();
     this.frames.clear();
     this.heap.clear();
+    this.motionRing.clear();
+    this.rgbRing.clear();
     this.seenEvents.clear();
     this.demoTick = 0;
     this.set({
@@ -260,6 +296,9 @@ export class SentinelStore {
       frames: [],
       frameCounts: {},
       heapHistory: [],
+      motionSamples: [],
+      lastMotion: null,
+      rgbLog: [],
       clientStats: null,
     });
   }
@@ -317,6 +356,7 @@ export class SentinelStore {
       }
       const now = Date.now();
       this.heap.push({ at: now, free: status.freeHeapBytes });
+      this.recordRgb(status, now);
       if (events.status === "fulfilled") this.ingestHttpEvents(events.value);
       this.client?.setExpectTraffic(status.clockSynced);
       this.pollBackoff.reset();
@@ -331,6 +371,7 @@ export class SentinelStore {
         lastPollAt: now,
         nextPollMs: this.snapshot.settings.refreshMs,
         heapHistory: this.heap.toArray(),
+        rgbLog: this.rgbRing.toArray(),
         timeline: this.timeline.toArray(),
         loading: false,
       });
@@ -379,12 +420,20 @@ export class SentinelStore {
       const now = Date.now();
       const status = demoStatus(this.demoTick);
       this.heap.push({ at: now, free: status.freeHeapBytes });
-      for (const message of demoFrames(this.demoTick, new Date(now))) this.ingest(message, now, false);
+      this.recordRgb(status, now);
+      const frames = demoFrames(this.demoTick, new Date(now));
+      let motionOffset = frames.filter(message => message.type === "motion.sample").length;
+      for (const message of frames) {
+        // Spread the 5 Hz DEMO motion samples over the elapsed second.
+        const at = message.type === "motion.sample" ? now - (motionOffset -= 1) * 200 : now;
+        this.ingest(message, at, false);
+      }
       this.demoTick += 1;
       this.set({
         realtimeStatus: status,
         previousStatus: this.snapshot.realtimeStatus,
         heapHistory: this.heap.toArray(),
+        rgbLog: this.rgbRing.toArray(),
         lastPollAt: now,
         httpError: null,
       });
@@ -423,6 +472,21 @@ export class SentinelStore {
       case "motion.status":
         patch.motion = message.payload;
         break;
+      case "motion.sample": {
+        const p = message.payload;
+        this.motionRing.push({
+          at: now,
+          deviceId: p.deviceId,
+          sampleIndex: p.sampleIndex,
+          linear: p.linearAcceleration,
+          gravity: p.gravity,
+          linearMs2: Math.hypot(p.linearAcceleration.x, p.linearAcceleration.y, p.linearAcceleration.z),
+          state: p.state,
+        });
+        patch.motionSamples = this.motionRing.toArray();
+        patch.lastMotion = p;
+        break;
+      }
       case "event":
         this.ingestEvent(message.payload, now);
         patch.timeline = this.timeline.toArray();
@@ -436,6 +500,15 @@ export class SentinelStore {
     }
     if (publish) this.set(patch);
     else this.snapshot = { ...this.snapshot, ...patch };
+  }
+
+  /** Logs the physical LED colour whenever it changes between polls. */
+  private recordRgb(status: RealtimeStatus, now: number): void {
+    const rgb = status.rgb;
+    if (!rgb) return;
+    const last = this.rgbRing.toArray().at(-1);
+    if (last && last.mode === rgb.mode && last.r === rgb.r && last.g === rgb.g && last.b === rgb.b) return;
+    this.rgbRing.push({ at: now, mode: rgb.mode, r: rgb.r, g: rgb.g, b: rgb.b });
   }
 
   /** Keeps the dedup set bounded to the events still held in the timeline. */

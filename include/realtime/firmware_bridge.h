@@ -25,6 +25,11 @@ uint32_t firmwareLargestFreeBlockBytes();
 uint32_t firmwareLoopStackFreeBytes();
 // esp_reset_reason() of the current boot, as a fixed uppercase name.
 const char* firmwareResetReason();
+// On-board WS2812 (GPIO48 on ESP32-S3-DevKitC-1 v1.0; override with
+// -DSENTINEL_RGB_PIN). Disabled with -DSENTINEL_RGB_ENABLED=0.
+bool firmwareRgbEnabled();
+int firmwareRgbPin();
+void firmwareWriteRgb(uint8_t r, uint8_t g, uint8_t b);
 
 }  // namespace realtime
 }  // namespace sentinel

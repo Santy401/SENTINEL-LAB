@@ -31,9 +31,10 @@ host('test_realtime_limits',['test/test_realtime_limits.cpp','src/realtime/auth.
 host('test_handshake',['test/test_handshake.cpp','src/realtime/handshake.cpp'])
 host('test_protocol_adapter',['test/test_protocol_adapter.cpp','src/realtime/protocol_adapter.cpp','src/realtime/time_source.cpp'],ARDUINOJSON)
 host('test_session',['test/test_session.cpp','src/realtime/session.cpp','src/realtime/protocol_adapter.cpp','src/realtime/time_source.cpp'],ARDUINOJSON)
+host('test_rgb_engine',['test/test_rgb_engine.cpp','src/realtime/rgb_engine.cpp','src/realtime/phone_motion.cpp'])
 host('test_ws_server',['test/test_ws_server.cpp','src/realtime/ws_server.cpp','src/realtime/auth.cpp','src/realtime/frame_codec.cpp','src/realtime/handshake.cpp','src/realtime/protocol_adapter.cpp','src/realtime/session.cpp','src/realtime/time_source.cpp'],['-Itest/stubs']+ARDUINOJSON)
 HEALTH_STUBS=['-Itest/health_stubs','test/health_stubs.cpp']
-HEALTH_SOURCES=['src/realtime/realtime_core.cpp','src/realtime/auth.cpp','src/realtime/protocol_adapter.cpp','src/realtime/session.cpp','src/realtime/time_source.cpp']
+HEALTH_SOURCES=['src/realtime/realtime_core.cpp','src/realtime/rgb_engine.cpp','src/realtime/phone_motion.cpp','src/realtime/auth.cpp','src/realtime/protocol_adapter.cpp','src/realtime/session.cpp','src/realtime/time_source.cpp']
 WEB_SOURCES=['src/rf/web_rf.cpp','src/realtime/web_app.cpp','test/web_app_stub.cpp']+HEALTH_SOURCES
 WEB_INCLUDES=['-Itest/web_stubs','-Itest/health_stubs','-Isrc']+ARDUINOJSON
 host('test_health',['test/test_health.cpp']+HEALTH_SOURCES+HEALTH_STUBS,['-Itest/stubs']+ARDUINOJSON)

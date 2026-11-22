@@ -79,10 +79,14 @@ int main() {
 
   JsonDocument doc;
   assert(!deserializeJson(doc, server.lastBody));
-  assert(doc.size() == 23);
+  assert(doc.size() == 25);
+  assert(!std::string(doc["rgb"]["mode"].as<const char*>()).empty());
+  assert(doc["rgb"]["pin"] == 48);
+  assert(doc["phoneMotion"]["active"] == false);
+  assert(doc["phoneMotion"]["deviceId"].isNull());
   assert(std::string(doc["fw"]) == "0.3.1");
-  assert(std::string(doc["realtimeVersion"]) == "0.4.3");
-  assert(std::string(doc["firmwareVersion"]) == "0.4.3");
+  assert(std::string(doc["realtimeVersion"]) == "0.5.0");
+  assert(std::string(doc["firmwareVersion"]) == "0.5.0");
   assert(std::string(doc["httpApiVersion"]) == "0.3.1");
   assert(std::string(doc["resetReason"]) == "POWERON");
   assert(std::string(doc["clockSource"]) == "none");

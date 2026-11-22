@@ -136,6 +136,27 @@ uint32_t firmwareLoopStackFreeBytes() {
   return static_cast<uint32_t>(uxTaskGetStackHighWaterMark(nullptr));
 }
 
+#ifndef SENTINEL_RGB_PIN
+#define SENTINEL_RGB_PIN 48
+#endif
+#ifndef SENTINEL_RGB_ENABLED
+#define SENTINEL_RGB_ENABLED 1
+#endif
+
+bool firmwareRgbEnabled() { return SENTINEL_RGB_ENABLED != 0; }
+int firmwareRgbPin() { return SENTINEL_RGB_PIN; }
+
+void firmwareWriteRgb(uint8_t r, uint8_t g, uint8_t b) {
+#if SENTINEL_RGB_ENABLED
+  // Arduino-ESP32 3.x RMT driver for the single on-board WS2812.
+  rgbLedWrite(SENTINEL_RGB_PIN, r, g, b);
+#else
+  (void)r;
+  (void)g;
+  (void)b;
+#endif
+}
+
 const char* firmwareResetReason() {
   switch (esp_reset_reason()) {
     case ESP_RST_POWERON:

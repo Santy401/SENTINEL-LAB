@@ -113,7 +113,7 @@ describe("demo replay", () => {
   it("produces only contract-valid frames", () => {
     const types = new Set<string>();
     for (let tick = 0; tick < 40; tick += 1) for (const message of demoFrames(tick, new Date(1795277402100 + tick * 1000))) types.add(message.type);
-    expect([...types].sort()).toEqual(["connection.heartbeat", "connection.hello", "event", "rf.telemetry", "system.status"]);
+    expect([...types].sort()).toEqual(["connection.heartbeat", "connection.hello", "event", "motion.sample", "rf.telemetry", "system.status"]);
   });
 
   it("is clearly marked through its status bootId", () => {

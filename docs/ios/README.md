@@ -151,6 +151,89 @@ cargados como secretos. CI sin certificado puede compilar, pero **no** produce
 una IPA instalable. No se usa jailbreak ni herramientas de *sideloading* no
 oficiales.
 
+## Laboratorio físico (app 1.1, firmware ≥ 0.5.0)
+
+### Movimiento (pestaña «Movimiento»)
+
+- **Fuente:** CoreMotion `deviceMotion` a 100 Hz, con marco `xArbitraryZVertical`.
+  El análisis corre en una cola de fondo (`MotionProcessor`) y la interfaz
+  recibe instantáneas a unos 30 Hz.
+- **Unidades:** CoreMotion entrega g; se convierte una sola vez a m/s² con
+  g₀ = 9,80665. La aceleración lineal (`userAcceleration`) excluye la gravedad.
+- **Agitación:**
+  - |a| bruta (instantánea) y |a| filtrada (RMS en una ventana de 0,5 s), siempre
+    rotuladas por separado.
+  - Pico de ventana, pico de la sesión, máximo, mínimo y promedio del valor
+    filtrado, y frecuencia de muestreo real.
+- **Fuerza:** F = m·a con la masa nominal del iPhone 12 (0,164 kg). Es la fuerza
+  neta que acelera el teléfono, no la fuerza de la mano.
+- **No se integra** la aceleración a velocidad ni a posición: la deriva lo haría
+  inválido.
+- **Estados:** `STABLE` < 0,5 m/s², `MOVEMENT` < 4 m/s², `ALERT` ≥ 4 m/s²
+  (valor filtrado).
+- **Visualización:** modelo 3D (SceneKit) orientado con el cuaternión de
+  `attitude`, ejes X/Y/Z, vector gravedad medido en el marco del dispositivo y
+  gráficas por eje de los últimos 10 s. Tiene modo inmersivo y modo científico.
+
+### Envío al ESP32 (`motion.sample`, Protocol v1)
+
+- **Requisitos:** solo con el token configurado y la sesión WebSocket abierta
+  (rol `ios` autenticado). El envío se puede desactivar en la propia pestaña.
+- **Ritmo:** 5 Hz. Con el heartbeat de 15 s queda por debajo del límite de 8
+  mensajes/s por cliente.
+- **Selección de muestras (peak-hold):** en cada ventana de 200 ms se envía la
+  muestra **real** con mayor |a lineal|, así una sacudida corta entre envíos no
+  se pierde y nunca se envía un valor promediado o sintético.
+- **Contenido:** `sourceType: CoreMotion` y vectores en m/s² en el marco del
+  dispositivo (`acceleration` = lineal + gravedad).
+  - `sampleIndex` arranca en los milisegundos Unix del arranque de la app, así
+    que crece de forma estricta entre ejecuciones.
+  - `deviceId` es el identificador estable de la instalación.
+- **Eco:** el ESP32 retransmite `motion.sample`. La app muestra el eco de sus
+  propias muestras como confirmación de ida y vuelta, y
+  `/api/realtime/status.phoneMotion` como lo que recibe el ESP32.
+
+### LED RGB
+
+`VirtualLed` refleja `/api/realtime/status.rgb` (modo, GPIO y color). El color
+físico se muestra escalado a brillo completo porque el LED real funciona
+atenuado. Con un firmware sin motor RGB se indica «Firmware sin motor RGB».
+
+### Distancia al ESP32
+
+- **Origen del RSSI:** iOS no ofrece el RSSI Wi-Fi propio. Se usa el RSSI que
+  el ESP32 mide para la estación de este iPhone. Si hay una sola estación se
+  elige automáticamente; si hay varias, el usuario la identifica y la app la
+  recuerda.
+- **Modelo:** log-distancia, RSSI = A − 10·n·log₁₀(d).
+  - **Orientativa (sin calibrar):** A = −40 dBm, n = 2,7, con un rango
+    plausible para n de 2,0 a 3,5.
+  - **Calibrada:** el modelo ajustado en el ESP32 (`/api/lab`) con mediciones
+    reales a distancias conocidas. Siempre se rotula como estimación.
+- **Alcance máximo teórico:** la distancia a la que el modelo llega a −90 dBm.
+  Es teórico, no una medición.
+- **Máxima distancia estimada en la sesión:** se guarda por separado para el
+  modelo calibrado y para el orientativo.
+- **Calibración guiada:**
+  1. `POST /api/experiments` para la estación de este iPhone.
+  2. En cada distancia (1, 2 y 4 m, editables): espera de 3 s y
+     `POST /api/measurements` con `calibration: true`.
+  3. `POST /api/calibration`.
+  4. Se muestran A y n leídos de `/api/lab`.
+
+  Los errores del firmware se traducen (RSSI no disponible, sesión RF caducada,
+  máximo de 8 experimentos en RAM, etc.).
+
+### Verificación (2026-11-22, Arch Linux)
+
+- `swift test` (SentinelKit): 46 tests, 0 fallos. Incluyen física,
+  peak-hold, envelope `motion.sample` validado con el decodificador estricto,
+  modelo de distancia y ajuste, y modelos HTTP nuevos.
+- `scripts/linux-install.sh --build-only` (xtool 1.24.0, SDK iOS 27.1):
+  *Build complete!*. IPA arm64 con `NSMotionUsageDescription`.
+- **No verificado en el iPhone:** sensores reales, escena 3D, envío al ESP32,
+  calibración contra el firmware 0.5.0.
+
 ## Seguridad y límites
 
 - HTTP/WebSocket sin TLS: aceptable solo en la red aislada del laboratorio.

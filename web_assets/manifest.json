@@ -1,12 +1,12 @@
 {
   "files": {
     "app.css.gz": {
-      "bytes": 16290,
-      "sha256": "2d17d7b3b2c029b73bd9be9f8018d2706927fbfb94de6d667f01be8073ac7175"
+      "bytes": 19695,
+      "sha256": "da96d53c42223cf0015858e50d292d97e5639f93fec04c2df7011b29f4c728ff"
     },
     "app.js.gz": {
-      "bytes": 222239,
-      "sha256": "05d0d689e216a06d16a0196821c171a220b6b9cd06d3d96eb45ebbc025338c75"
+      "bytes": 388419,
+      "sha256": "f30c4b7947141d2ca8c5351909584561de37251c209e6bd9d1918cd60020eb08"
     },
     "apple-touch-icon.png.gz": {
       "bytes": 9912,
@@ -22,7 +22,7 @@
     },
     "index.html.gz": {
       "bytes": 660,
-      "sha256": "d829117629e5f1d7e6e1072777a5c9f8faf35dd66fa382d243d6d5fda24188be"
+      "sha256": "825604b9b480fbea9f5e17e257349ff65ce5d337e0bf35c293ed357705727974"
     },
     "manifest.webmanifest.gz": {
       "bytes": 285,
@@ -31,8 +31,8 @@
   },
   "source": "apps/web/dist",
   "uncompressed": {
-    "app.css": 89625,
-    "app.js": 693545,
+    "app.css": 108114,
+    "app.js": 1339692,
     "index.html": 1459
   }
 }

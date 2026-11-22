@@ -33,6 +33,10 @@ enum class WsCloseCode : uint16_t {
 // Memory: every buffer is a member with a fixed size. Nothing large is placed
 // on the Arduino loop task stack (8 KiB), and peers are reset in place instead
 // of being assigned from a multi-kilobyte temporary.
+// Receives validated phone motion samples (authenticated sessions only).
+using MotionSink = void (*)(void* context, const InboundMessage& message,
+                            uint32_t nowMs);
+
 class RealtimeServer {
  public:
   static constexpr size_t kMaxPeers = 4;
@@ -49,6 +53,10 @@ class RealtimeServer {
              ProtocolAdapter& adapter, const AuthGuard& auth);
 
   void loop(uint32_t nowMs);
+  void setMotionSink(MotionSink sink, void* context) {
+    motionSink_ = sink;
+    motionContext_ = context;
+  }
   void broadcast(const char* message, size_t length);
 
   size_t clientCount() const;
@@ -108,6 +116,8 @@ class RealtimeServer {
   uint32_t handshakeTimeouts_ = 0;
   uint32_t idleTimeouts_ = 0;
   uint32_t remoteCloses_ = 0;
+  MotionSink motionSink_ = nullptr;
+  void* motionContext_ = nullptr;
 
   // Scratch buffers. The loop is single-threaded, and the nesting is fixed:
   // rx_/payload_ (inbound) -> json_ (envelope) -> frame_ (encoded frame).

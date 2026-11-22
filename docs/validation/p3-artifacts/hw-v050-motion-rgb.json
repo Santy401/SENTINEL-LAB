@@ -1,0 +1,90 @@
+{
+ "pre": {
+  "firmwareVersion": "0.5.0",
+  "clockSynced": false,
+  "clientCount": 0,
+  "rgb": {
+   "enabled": true,
+   "pin": 48,
+   "mode": "offline",
+   "r": 0,
+   "g": 1,
+   "b": 9
+  },
+  "phoneMotion": {
+   "active": false,
+   "deviceId": null,
+   "sampleAgeMs": null,
+   "linearAccelMs2": 0,
+   "intensity": 0,
+   "peakMs2": 0,
+   "samples": 0
+  }
+ },
+ "appjs": {
+  "bytes": 388419,
+  "seconds": 0.3
+ },
+ "modes": [
+  [
+   "motion",
+   2,
+   8,
+   3,
+   0.2
+  ],
+  [
+   "motion",
+   31,
+   8,
+   0,
+   0.53
+  ],
+  [
+   "motion",
+   47,
+   3,
+   0,
+   0.8
+  ],
+  [
+   "motion",
+   55,
+   2,
+   0,
+   0.87
+  ],
+  [
+   "motion",
+   62,
+   0,
+   0,
+   1
+  ]
+ ],
+ "post": {
+  "clockSynced": true,
+  "clockSource": "peer",
+  "droppedFrames": 0,
+  "rejectedMessages": 0,
+  "phoneMotion": {
+   "active": false,
+   "deviceId": "iphone-test01",
+   "sampleAgeMs": 4767,
+   "linearAccelMs2": 9.637953863,
+   "intensity": 0,
+   "peakMs2": 9.999118601,
+   "samples": 40
+  },
+  "rgb": {
+   "enabled": true,
+   "pin": 48,
+   "mode": "offline",
+   "r": 0,
+   "g": 11,
+   "b": 3
+  }
+ },
+ "relayed": 40,
+ "relayedSchemaErrors": 0
+}

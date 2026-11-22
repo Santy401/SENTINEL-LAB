@@ -67,6 +67,8 @@ void RealtimeCore::begin(uint16_t port, const char* bootId,
   }
 
   server_.begin(port, bootId_, clock_, adapter_, auth);
+  server_.setMotionSink(&RealtimeCore::onMotion, this);
+  rgb_.begin(millis());
   activeCore = this;
 }
 
@@ -76,6 +78,7 @@ void RealtimeCore::loop(uint32_t nowMs) {
   sampleHeap(nowMs);
   tryNtpSync(nowMs);
   server_.loop(nowMs);
+  updateRgb(nowMs);
 
   if (!clock_.synced()) return;
   if (!scheduleArmed_) armSchedule(nowMs);
@@ -103,6 +106,7 @@ void RealtimeCore::loop(uint32_t nowMs) {
     lastMotion_ = nowMs;
     publishMotion(nowMs);
   }
+  relayMotion(nowMs);
   if (uint32_t(nowMs - lastEventPoll_) >= kEventPollIntervalMs) {
     lastEventPoll_ = nowMs;
     publishEvents(nowMs);
@@ -241,6 +245,56 @@ void RealtimeCore::publishEvents(uint32_t nowMs) {
       continue;
     }
     server_.broadcast(message, strlen(message));
+    rgb_.pulseEvent(nowMs);
+  }
+}
+
+void RealtimeCore::onMotion(void* context, const InboundMessage& m,
+                            uint32_t nowMs) {
+  auto* core = static_cast<RealtimeCore*>(context);
+  core->phone_.ingest(m.motionDeviceId, m.linear, nowMs);
+  snprintf(core->relayDeviceId_, sizeof(core->relayDeviceId_), "%s", m.motionDeviceId);
+  snprintf(core->relaySource_, sizeof(core->relaySource_), "%s", m.motionSourceType);
+  snprintf(core->relayState_, sizeof(core->relayState_), "%s", m.motionState);
+  snprintf(core->relaySensorTs_, sizeof(core->relaySensorTs_), "%s", m.motionSensorTimestamp);
+  MotionSampleView& r = core->relay_;
+  r.deviceId = core->relayDeviceId_;
+  r.sourceType = core->relaySource_;
+  r.state = core->relayState_;
+  r.sensorTimestamp = core->relaySensorTs_;
+  r.sampleIndex = m.motionSampleIndex;
+  r.acceleration = m.acceleration;
+  r.gravity = m.gravity;
+  r.linear = m.linear;
+  core->relayPending_ = true;
+}
+
+void RealtimeCore::relayMotion(uint32_t nowMs) {
+  if (!relayPending_ || uint32_t(nowMs - lastRelay_) < kMotionRelayMs) return;
+  relayPending_ = false;
+  lastRelay_ = nowMs;
+  if (!adapter_.buildMotionSample(systemSession_.source(),
+                                  systemSession_.sessionId(),
+                                  systemSession_.nextSequence(), nowMs, relay_,
+                                  message_, sizeof(message_))) {
+    ++droppedTelemetry_;
+    return;
+  }
+  server_.broadcast(message_, strlen(message_));
+}
+
+void RealtimeCore::updateRgb(uint32_t nowMs) {
+  if (uint32_t(nowMs - lastRgbFrame_) < kRgbFrameMs) return;
+  lastRgbFrame_ = nowMs;
+  RgbInputs in;
+  in.nowMs = nowMs;
+  in.clients = server_.clientCount();
+  in.synced = clock_.synced();
+  in.motionActive = phone_.active(nowMs);
+  in.intensity = phone_.intensity(nowMs);
+  if (rgb_.update(in)) {
+    const RgbColor c = rgb_.color();
+    firmwareWriteRgb(c.r, c.g, c.b);
   }
 }
 
@@ -278,6 +332,22 @@ bool snapshotRealtimeHealth(RealtimeHealthView& output) {
   output.handshakeTimeouts = core->server().handshakeTimeouts();
   output.idleTimeouts = core->server().idleTimeouts();
   output.remoteCloses = core->server().remoteCloses();
+  output.rgbEnabled = firmwareRgbEnabled();
+  output.rgbPin = firmwareRgbPin();
+  output.rgbMode = rgbModeName(core->rgb().mode());
+  const RgbColor color = core->rgb().color();
+  output.rgbR = color.r;
+  output.rgbG = color.g;
+  output.rgbB = color.b;
+  const PhoneMotion& phone = core->phoneMotion();
+  output.phoneActive = phone.active(now);
+  output.phoneHasSample = phone.hasSample();
+  output.phoneDeviceId = phone.deviceId();
+  output.phoneLinearMs2 = phone.magnitude();
+  output.phoneIntensity = phone.intensity(now);
+  output.phonePeakMs2 = phone.peak();
+  output.phoneSamples = phone.samples();
+  output.phoneSampleAgeMs = phone.ageMs(now);
   return true;
 }
 
