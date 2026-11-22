@@ -135,3 +135,33 @@ final class ActivityAndHapticsTests: XCTestCase {
         XCTAssertLessThan(mid, 0.5)
     }
 }
+
+final class AlertWebhookTests: XCTestCase {
+    func testBodyMatchesGatewayShape() throws {
+        let alert = LabAlert(id: "abc", kind: .strongShake, date: Date(timeIntervalSince1970: 1_795_373_386),
+                             message: "Agitación de 9,4 m/s²")
+        let data = AlertWebhookPayload.body(for: alert, bootId: "b00t", firmwareVersion: "0.5.0",
+                                            metrics: ["shakeMs2": 9.4, "bad": .nan])
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["id"] as? String, "ios-abc")
+        XCTAssertEqual(json["rule"] as? String, "strongShake")
+        XCTAssertEqual(json["severity"] as? String, "critical")
+        XCTAssertEqual(json["title"] as? String, "Agitación fuerte")
+        XCTAssertEqual((json["occurredAt"] as? String)?.hasPrefix("2026-11-22T"), true)
+        let metrics = try XCTUnwrap(json["metrics"] as? [String: Double])
+        XCTAssertEqual(metrics, ["shakeMs2": 9.4])
+        let device = try XCTUnwrap(json["device"] as? [String: Any])
+        XCTAssertEqual(device["bootId"] as? String, "b00t")
+        XCTAssertEqual(device["source"] as? String, "ios")
+    }
+
+    func testSignedMessageAndPolicy() {
+        let body = Data("{\"a\":1}".utf8)
+        XCTAssertEqual(String(decoding: AlertWebhookPayload.signedMessage(timestamp: 42, body: body), as: UTF8.self),
+                       "42.{\"a\":1}")
+        XCTAssertTrue(AlertWebhookPayload.isPermanentFailure(401))
+        XCTAssertFalse(AlertWebhookPayload.isPermanentFailure(503))
+        XCTAssertEqual(AlertWebhookPayload.backoff(attempt: 0), 5)
+        XCTAssertEqual(AlertWebhookPayload.backoff(attempt: 20), 600)
+    }
+}
