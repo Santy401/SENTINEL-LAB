@@ -81,8 +81,8 @@ int main() {
   assert(!deserializeJson(doc, server.lastBody));
   assert(doc.size() == 23);
   assert(std::string(doc["fw"]) == "0.3.1");
-  assert(std::string(doc["realtimeVersion"]) == "0.4.2");
-  assert(std::string(doc["firmwareVersion"]) == "0.4.2");
+  assert(std::string(doc["realtimeVersion"]) == "0.4.3");
+  assert(std::string(doc["firmwareVersion"]) == "0.4.3");
   assert(std::string(doc["httpApiVersion"]) == "0.3.1");
   assert(std::string(doc["resetReason"]) == "POWERON");
   assert(std::string(doc["clockSource"]) == "none");

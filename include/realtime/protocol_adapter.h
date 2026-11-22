@@ -16,7 +16,7 @@ constexpr size_t kProtocolMessageBytes = 1016;
 constexpr char kProtocolVersion[] = "1.0.0";
 // Version of the realtime firmware image. The HTTP API keeps reporting
 // kHttpApiVersion in /api/state ("fw") so v0.3.1 clients stay compatible.
-constexpr char kFirmwareVersion[] = "0.4.2";
+constexpr char kFirmwareVersion[] = "0.4.3";
 constexpr char kHttpApiVersion[] = "0.3.1";
 
 struct RfClientView {

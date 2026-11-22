@@ -1,22 +1,38 @@
 {
   "files": {
     "app.css.gz": {
-      "bytes": 16245,
-      "sha256": "8535a5bb10fe70c62a85537acd6dbdf21f88187e75be16e2d15088cc5a14c194"
+      "bytes": 16290,
+      "sha256": "2d17d7b3b2c029b73bd9be9f8018d2706927fbfb94de6d667f01be8073ac7175"
     },
     "app.js.gz": {
       "bytes": 222239,
-      "sha256": "6734fe583a5fabf8f1df843ed94342c5a91ccc4b78a045f907de8d0bd9167cce"
+      "sha256": "05d0d689e216a06d16a0196821c171a220b6b9cd06d3d96eb45ebbc025338c75"
+    },
+    "apple-touch-icon.png.gz": {
+      "bytes": 9912,
+      "sha256": "a9faf3d530de19b840505f587c86f32f5e80743790c1aee9e821eef7dd17c224"
+    },
+    "icon-192.png.gz": {
+      "bytes": 10529,
+      "sha256": "6c387564171b29e5a952914af595f4a1f282753bdcc6aee9c0eb11b2d7ad632d"
+    },
+    "icon-512.png.gz": {
+      "bytes": 25492,
+      "sha256": "28a5a2d268829ceb90c2400c20498f7a90c155ac7dc91994c5da1e52b1ff9280"
     },
     "index.html.gz": {
-      "bytes": 491,
-      "sha256": "ae10149b1cbba48ad0254f9473e2a2f5eb45f7e4de9222a6257fd71bca2921bc"
+      "bytes": 660,
+      "sha256": "d829117629e5f1d7e6e1072777a5c9f8faf35dd66fa382d243d6d5fda24188be"
+    },
+    "manifest.webmanifest.gz": {
+      "bytes": 285,
+      "sha256": "bc53952811226ee3fd64eed3b34318683b0eaf689ebf8527300f1e4532db3178"
     }
   },
   "source": "apps/web/dist",
   "uncompressed": {
-    "app.css": 89460,
+    "app.css": 89625,
     "app.js": 693545,
-    "index.html": 921
+    "index.html": 1459
   }
 }
