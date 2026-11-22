@@ -34,10 +34,34 @@ bool validIdentifier(const char* text, bool upperAllowed) {
 }
 
 bool allowedType(const char* type) {
-  return strcmp(type, "connection.hello") == 0 ||
+  return strcmp(type, "motion.sample") == 0 ||
+         strcmp(type, "connection.hello") == 0 ||
          strcmp(type, "connection.heartbeat") == 0 ||
          strcmp(type, "connection.goodbye") == 0 ||
          strcmp(type, "error") == 0;
+}
+
+bool readVector(JsonVariantConst value, MotionVector& out) {
+  if (!value.is<JsonObjectConst>()) return false;
+  JsonObjectConst object = value.as<JsonObjectConst>();
+  if (object.size() != 3) return false;
+  double* fields[3] = {&out.x, &out.y, &out.z};
+  const char* keys[3] = {"x", "y", "z"};
+  for (int i = 0; i < 3; ++i) {
+    JsonVariantConst v = object[keys[i]];
+    if (!v.is<double>() && !v.is<long>()) return false;
+    const double d = v.as<double>();
+    if (!(d >= -500.0 && d <= 500.0)) return false;  // also rejects NaN
+    *fields[i] = d;
+  }
+  return true;
+}
+
+bool oneOf(const char* value, const char* const* options, size_t count) {
+  for (size_t i = 0; i < count; ++i) {
+    if (strcmp(value, options[i]) == 0) return true;
+  }
+  return false;
 }
 
 InboundMessage reject(uint8_t code, const char* text) {
@@ -217,6 +241,51 @@ InboundMessage InboundValidator::validate(const char* json, size_t length,
     snprintf(result.role, sizeof(result.role), "%s", role);
     snprintf(result.supportedVersion, sizeof(result.supportedVersion), "%s",
              supported);
+  }
+
+  if (strcmp(type, "motion.sample") == 0) {
+    // Only an authenticated, privileged session (the iPhone app with the
+    // token) may stream motion; it drives the RGB LED and is relayed.
+    if (!authenticated || !session.privileged()) {
+      return reject(kUnauthorizedCode, "motion requires an authenticated session");
+    }
+    JsonObjectConst payload = document["payload"].as<JsonObjectConst>();
+    static const char* const kAllowed[] = {
+        "deviceId", "sourceType", "sampleIndex", "sensorTimestamp",
+        "acceleration", "gravity", "linearAcceleration", "state", "simulated"};
+    for (JsonPairConst pair : payload) {
+      if (!oneOf(pair.key().c_str(), kAllowed, 9)) {
+        return reject(kInvalidEnvelopeCode, "invalid envelope");
+      }
+    }
+    const char* deviceId = valueOrEmpty(payload["deviceId"]);
+    const char* sourceType = valueOrEmpty(payload["sourceType"]);
+    const char* state = valueOrEmpty(payload["state"]);
+    static const char* const kSources[] = {"NativeClient", "SensorLogger", "CoreMotion"};
+    static const char* const kStates[] = {"STABLE", "MOVEMENT", "ALERT", "SENSOR_OFFLINE"};
+    if (!validIdentifier(deviceId, true) || !oneOf(sourceType, kSources, 3) ||
+        !oneOf(state, kStates, 4) || !payload["simulated"].is<bool>() ||
+        payload["simulated"].as<bool>() ||
+        !(payload["sampleIndex"].is<uint64_t>() || payload["sampleIndex"].is<uint32_t>()) ||
+        !readVector(payload["acceleration"], result.acceleration) ||
+        !readVector(payload["gravity"], result.gravity) ||
+        !readVector(payload["linearAcceleration"], result.linear)) {
+      return reject(kInvalidEnvelopeCode, "invalid envelope");
+    }
+    const JsonVariantConst sensorTs = payload["sensorTimestamp"];
+    if (!sensorTs.isNull()) {
+      const char* ts = valueOrEmpty(sensorTs);
+      int64_t ignored = 0;
+      if (!UtcClock::parse(ts, strlen(ts), ignored)) {
+        return reject(kInvalidEnvelopeCode, "invalid envelope");
+      }
+      snprintf(result.motionSensorTimestamp, sizeof(result.motionSensorTimestamp), "%s", ts);
+    }
+    result.isMotion = true;
+    result.motionSampleIndex = payload["sampleIndex"].as<uint64_t>();
+    snprintf(result.motionDeviceId, sizeof(result.motionDeviceId), "%s", deviceId);
+    snprintf(result.motionSourceType, sizeof(result.motionSourceType), "%s", sourceType);
+    snprintf(result.motionState, sizeof(result.motionState), "%s", state);
   }
 
   if (strcmp(type, "connection.heartbeat") == 0 && authenticated &&

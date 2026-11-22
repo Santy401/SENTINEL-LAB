@@ -98,6 +98,44 @@ public enum ClientSessionError: Error, Equatable, Sendable {
     case invalidDeviceId
     case sequenceExhausted
     case frameTooLarge(Int)
+    case invalidMotionSample
+}
+
+/// Outbound `motion.sample` payload (packages/protocol/schemas/motion.sample.schema.json).
+public struct OutboundMotionSample: Encodable, Equatable, Sendable {
+    public let deviceId: String
+    public let sourceType = "CoreMotion"
+    public let sampleIndex: UInt64
+    public let sensorTimestamp: String
+    public let acceleration: Vec3
+    public let gravity: Vec3
+    public let linearAcceleration: Vec3
+    public let state: String
+    public let simulated = false
+
+    enum CodingKeys: String, CodingKey {
+        case deviceId, sourceType, sampleIndex, sensorTimestamp, acceleration, gravity, linearAcceleration, state,
+             simulated
+    }
+
+    /// - Parameters:
+    ///   - reading: real reading in m/s².
+    ///   - filteredMs2: filtered |linear| used for the state, consistent with the UI.
+    public init(deviceId: String, sampleIndex: UInt64, reading: MotionReading, filteredMs2: Double) {
+        self.deviceId = deviceId
+        self.sampleIndex = sampleIndex
+        sensorTimestamp = ProtocolTimestamp.format(reading.date)
+        acceleration = reading.total.rounded()
+        gravity = reading.gravity.rounded()
+        linearAcceleration = reading.linear.rounded()
+        state = ShakeClassifier.state(filteredMs2: filteredMs2).rawValue
+    }
+
+    var isValid: Bool {
+        sampleIndex <= maxSafeInteger && [acceleration, gravity, linearAcceleration].allSatisfy { vector in
+            vector.isFinite && [vector.x, vector.y, vector.z].allSatisfy { (-500...500).contains($0) }
+        } && state != MotionState.sensorOffline.rawValue
+    }
 }
 
 /// Client-owned identity for one WebSocket connection. The firmware binds the
@@ -135,6 +173,14 @@ public struct ClientSession: Sendable {
         return try envelope(type: "connection.heartbeat",
                             payload: HeartbeatPayload(bootId: bootId, uptimeMs: min(uptimeMs, maxSafeInteger)),
                             at: date)
+    }
+
+    /// `motion.sample` built from a real CoreMotion reading (SI units, device
+    /// frame). The caller chooses which reading to send (see PeakHoldWindow).
+    public mutating func motionSample(_ sample: OutboundMotionSample, at date: Date) throws -> Data {
+        guard Patterns.isIdentifier(sample.deviceId) else { throw ClientSessionError.invalidDeviceId }
+        guard sample.isValid else { throw ClientSessionError.invalidMotionSample }
+        return try envelope(type: "motion.sample", payload: sample, at: date)
     }
 
     public mutating func goodbye(reason: GoodbyeReason, at date: Date) throws -> Data {

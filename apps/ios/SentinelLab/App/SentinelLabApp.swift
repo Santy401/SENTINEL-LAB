@@ -18,6 +18,8 @@ struct RootView: View {
         TabView {
             DashboardView()
                 .tabItem { Label("Panel", systemImage: "gauge.with.needle") }
+            MotionView()
+                .tabItem { Label("Movimiento", systemImage: "gyroscope") }
             TelemetryView()
                 .tabItem { Label("Telemetría", systemImage: "waveform.path.ecg") }
             DiagnosticsView()

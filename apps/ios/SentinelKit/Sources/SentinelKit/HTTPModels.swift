@@ -28,6 +28,10 @@ public struct RealtimeStatus: Codable, Equatable, Sendable {
     public var handshakeTimeouts: UInt64?
     public var idleTimeouts: UInt64?
     public var resetReason: String?
+    /// Firmware ≥ 0.5.0: physical RGB LED state (WS2812 on the DevKit).
+    public var rgb: RgbStatus?
+    /// Firmware ≥ 0.5.0: phone motion as received by the ESP32.
+    public var phoneMotion: PhoneMotionStatus?
 
     public init() {}
 
@@ -126,4 +130,104 @@ public struct EventLog: Codable, Equatable, Sendable {
     public var bootId: String?
     public var notificationsEnabled: Bool?
     public var events: [Entry]?
+}
+
+/// State of the ESP32 RGB engine as reported by `/api/realtime/status`.
+public struct RgbStatus: Codable, Equatable, Sendable {
+    public var enabled: Bool?
+    public var pin: Int?
+    public var mode: String?
+    public var r: Int?
+    public var g: Int?
+    public var b: Int?
+
+    public init(enabled: Bool? = nil, pin: Int? = nil, mode: String? = nil, r: Int? = nil, g: Int? = nil, b: Int? = nil) {
+        self.enabled = enabled
+        self.pin = pin
+        self.mode = mode
+        self.r = r
+        self.g = g
+        self.b = b
+    }
+
+    /// Color components in 0...1, clamped; nil when the firmware did not report them.
+    public var unitColor: (red: Double, green: Double, blue: Double)? {
+        guard let r, let g, let b else { return nil }
+        func unit(_ value: Int) -> Double { Double(min(max(value, 0), 255)) / 255 }
+        return (unit(r), unit(g), unit(b))
+    }
+
+    /// Spanish description of the firmware LED mode.
+    public var modeLabel: String {
+        switch mode {
+        case "boot": return "Arranque"
+        case "offline": return "Sin clientes"
+        case "client": return "Cliente conectado"
+        case "synced": return "Reloj sincronizado"
+        case "motion": return "Movimiento del iPhone"
+        case "event": return "Evento"
+        case nil: return "—"
+        case let other?: return other
+        }
+    }
+}
+
+/// Phone motion summary computed by the ESP32 from received `motion.sample`.
+public struct PhoneMotionStatus: Codable, Equatable, Sendable {
+    public var active: Bool?
+    public var deviceId: String?
+    public var linearAccelMs2: Double?
+    public var intensity: Double?
+    public var peakMs2: Double?
+    public var samples: UInt64?
+    public var sampleAgeMs: UInt64?
+}
+
+/// `GET /api/lab`: distance experiments stored in ESP32 RAM.
+public struct LabSnapshot: Codable, Equatable, Sendable {
+    public struct Experiment: Codable, Equatable, Sendable, Identifiable {
+        public var id: Int
+        public var name: String?
+        public var clientId: UInt64?
+        public var environment: Int?
+        public var calibrated: Bool?
+        public var n: Double?
+        public var referenceRssi: Double?
+        public var currentEstimateM: Double?
+
+        /// Model fitted on the ESP32, when calibrated.
+        public var model: LogDistanceModel? {
+            guard calibrated == true, let n, let referenceRssi else { return nil }
+            let model = LogDistanceModel(referenceRssiAt1m: referenceRssi, exponent: n)
+            return model.isPlausible ? model : nil
+        }
+    }
+
+    public struct Measurement: Codable, Equatable, Sendable, Identifiable {
+        public var id: Int
+        public var experimentId: Int?
+        public var clientId: UInt64?
+        public var actualM: Double?
+        public var connected: Bool?
+        public var calibration: Bool?
+        public var rssiDbm: Double?
+        public var filteredDbm: Double?
+        public var estimatedM: Double?
+        public var errorM: Double?
+    }
+
+    public var bootId: String?
+    public var experiments: [Experiment]?
+    public var measurements: [Measurement]?
+
+    /// Most recent calibrated experiment for a client.
+    public func calibratedExperiment(clientId: UInt64) -> Experiment? {
+        experiments?.last { $0.clientId == clientId && $0.model != nil }
+    }
+}
+
+/// Error body of every lab POST: `{"ok":false,"error":"..."}`.
+public struct LabErrorBody: Codable, Equatable, Sendable {
+    public var ok: Bool?
+    public var error: String?
 }

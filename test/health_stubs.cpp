@@ -43,6 +43,9 @@ uint32_t firmwareFreeHeapBytes() { return gTestFreeHeap; }
 uint32_t firmwareLargestFreeBlockBytes() { return gTestFreeHeap / 2; }
 uint32_t firmwareLoopStackFreeBytes() { return 4096; }
 const char* firmwareResetReason() { return "POWERON"; }
+bool firmwareRgbEnabled() { return true; }
+int firmwareRgbPin() { return 48; }
+void firmwareWriteRgb(uint8_t, uint8_t, uint8_t) {}
 
 }  // namespace realtime
 

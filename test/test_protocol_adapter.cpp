@@ -161,6 +161,28 @@ int main() {
                               goodbye, sizeof(goodbye)));
   assertValidEnvelope(goodbye, "connection.goodbye");
 
+  // Relayed phone motion sample (firmware 0.5.0).
+  MotionSampleView sample;
+  sample.deviceId = "iphone-0a1b2c3d";
+  sample.sourceType = "CoreMotion";
+  sample.sampleIndex = 42;
+  sample.sensorTimestamp = "2026-11-21T16:10:02.000Z";
+  sample.acceleration = MotionVector{1.2, -9.6, 0.4};
+  sample.gravity = MotionVector{0.1, -9.8, 0.2};
+  sample.linear = MotionVector{1.1, 0.2, 0.2};
+  sample.state = "MOVEMENT";
+  char motionSample[kProtocolMessageBytes]{};
+  assert(adapter.buildMotionSample(kSource, kSession, 8, 2500, sample,
+                                   motionSample, sizeof(motionSample)));
+  assert(std::strstr(motionSample, "\"type\":\"motion.sample\""));
+  assert(std::strstr(motionSample, "\"simulated\":false"));
+  MotionSampleView badSample = sample;
+  badSample.deviceId = "bad id";
+  assert(!adapter.buildMotionSample(kSource, kSession, 9, 2500, badSample,
+                                    motionSample, sizeof(motionSample)));
+  assert(adapter.buildMotionSample(kSource, kSession, 8, 2500, sample,
+                                   motionSample, sizeof(motionSample)));
+  writeFixture("firmware-motion-sample.json", motionSample);
   writeFixture("firmware-hello.json", hello);
   writeFixture("firmware-heartbeat.json", heartbeat);
   writeFixture("firmware-rf.json", telemetry);

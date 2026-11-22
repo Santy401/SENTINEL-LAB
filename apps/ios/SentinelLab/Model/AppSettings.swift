@@ -14,6 +14,18 @@ final class AppSettings {
     var showFilteredRssi: Bool { didSet { defaults.set(showFilteredRssi, forKey: Keys.showFiltered) } }
     var chartWindowMinutes: Int { didSet { defaults.set(chartWindowMinutes, forKey: Keys.chartWindow) } }
     var pollIntervalSeconds: Int { didSet { defaults.set(pollIntervalSeconds, forKey: Keys.pollInterval) } }
+    /// Send real CoreMotion samples to the ESP32 (needs the token).
+    var motionStreaming: Bool { didSet { defaults.set(motionStreaming, forKey: Keys.motionStreaming) } }
+    /// Immersive (visual) vs scientific (numbers first) motion layout.
+    var immersiveMotion: Bool { didSet { defaults.set(immersiveMotion, forKey: Keys.immersiveMotion) } }
+    /// RF clientId the user identified as this iPhone (the ESP32 measures it).
+    var thisClientId: UInt64? {
+        didSet {
+            if let thisClientId { defaults.set(String(thisClientId), forKey: Keys.thisClientId) } else {
+                defaults.removeObject(forKey: Keys.thisClientId)
+            }
+        }
+    }
 
     /// Stable per-install identifier used as the Protocol v1 `deviceId`.
     let deviceId: String
@@ -25,6 +37,9 @@ final class AppSettings {
         static let chartWindow = "settings.chartWindowMinutes"
         static let pollInterval = "settings.pollIntervalSeconds"
         static let deviceId = "settings.deviceId"
+        static let motionStreaming = "settings.motionStreaming"
+        static let immersiveMotion = "settings.immersiveMotion"
+        static let thisClientId = "settings.thisClientId"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -34,6 +49,9 @@ final class AppSettings {
         showFilteredRssi = defaults.object(forKey: Keys.showFiltered) as? Bool ?? true
         chartWindowMinutes = defaults.object(forKey: Keys.chartWindow) as? Int ?? 5
         pollIntervalSeconds = defaults.object(forKey: Keys.pollInterval) as? Int ?? 2
+        motionStreaming = defaults.object(forKey: Keys.motionStreaming) as? Bool ?? true
+        immersiveMotion = defaults.object(forKey: Keys.immersiveMotion) as? Bool ?? true
+        thisClientId = defaults.string(forKey: Keys.thisClientId).flatMap(UInt64.init)
         if let stored = defaults.string(forKey: Keys.deviceId) {
             deviceId = stored
         } else {

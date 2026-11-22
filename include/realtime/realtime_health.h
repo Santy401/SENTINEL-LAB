@@ -37,6 +37,20 @@ struct RealtimeHealthView {
   uint32_t handshakeTimeouts = 0;
   uint32_t idleTimeouts = 0;
   uint32_t remoteCloses = 0;
+  bool rgbEnabled = false;
+  int rgbPin = -1;
+  const char* rgbMode = "offline";
+  uint8_t rgbR = 0;
+  uint8_t rgbG = 0;
+  uint8_t rgbB = 0;
+  bool phoneActive = false;
+  bool phoneHasSample = false;
+  const char* phoneDeviceId = "";
+  double phoneLinearMs2 = 0;
+  float phoneIntensity = 0;
+  double phonePeakMs2 = 0;
+  uint32_t phoneSamples = 0;
+  uint32_t phoneSampleAgeMs = 0;
 };
 
 // Fills the view from the active core. Returns false when the core is not

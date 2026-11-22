@@ -1,5 +1,6 @@
 #pragma once
 
+#include "realtime/phone_motion.h"
 #include "realtime/time_source.h"
 
 #include <cmath>
@@ -16,7 +17,7 @@ constexpr size_t kProtocolMessageBytes = 1016;
 constexpr char kProtocolVersion[] = "1.0.0";
 // Version of the realtime firmware image. The HTTP API keeps reporting
 // kHttpApiVersion in /api/state ("fw") so v0.3.1 clients stay compatible.
-constexpr char kFirmwareVersion[] = "0.4.3";
+constexpr char kFirmwareVersion[] = "0.5.0";
 constexpr char kHttpApiVersion[] = "0.3.1";
 
 struct RfClientView {
@@ -49,6 +50,18 @@ struct MotionStatusView {
   bool signalLost = true;
   uint64_t simulationRejected = 0;
   uint16_t lastHttpCode = 0;
+};
+
+// A validated phone motion sample, relayed as Protocol v1 motion.sample.
+struct MotionSampleView {
+  const char* deviceId = "";
+  const char* sourceType = "CoreMotion";
+  uint64_t sampleIndex = 0;
+  const char* sensorTimestamp = "";  // empty: omitted
+  MotionVector acceleration;
+  MotionVector gravity;
+  MotionVector linear;
+  const char* state = "STABLE";
 };
 
 struct EventDetailsView {
@@ -89,6 +102,11 @@ class ProtocolAdapter {
   bool buildMotionStatus(const char* source, const char* sessionId,
                          uint64_t sequence, uint32_t nowMs,
                          const MotionStatusView& status, char* output,
+                         size_t capacity) const;
+
+  bool buildMotionSample(const char* source, const char* sessionId,
+                         uint64_t sequence, uint32_t nowMs,
+                         const MotionSampleView& sample, char* output,
                          size_t capacity) const;
 
   bool buildEvent(const char* source, const char* sessionId,

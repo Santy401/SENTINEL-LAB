@@ -215,6 +215,38 @@ bool ProtocolAdapter::buildMotionStatus(
       output, capacity);
 }
 
+bool ProtocolAdapter::buildMotionSample(const char* source,
+                                        const char* sessionId,
+                                        uint64_t sequence, uint32_t nowMs,
+                                        const MotionSampleView& s,
+                                        char* output, size_t capacity) const {
+  if (!validProtocolDeviceId(s.deviceId) || !s.sourceType || !*s.sourceType ||
+      !s.state || !*s.state) {
+    return false;
+  }
+  return envelope(
+      "motion.sample", source, sessionId, sequence, nowMs,
+      [&](JsonObject payload) {
+        auto vec = [](JsonObject o, const MotionVector& v) {
+          o["x"] = v.x;
+          o["y"] = v.y;
+          o["z"] = v.z;
+        };
+        payload["deviceId"] = s.deviceId;
+        payload["sourceType"] = s.sourceType;
+        payload["sampleIndex"] = s.sampleIndex;
+        if (s.sensorTimestamp && *s.sensorTimestamp) {
+          payload["sensorTimestamp"] = s.sensorTimestamp;
+        }
+        vec(payload["acceleration"].to<JsonObject>(), s.acceleration);
+        vec(payload["gravity"].to<JsonObject>(), s.gravity);
+        vec(payload["linearAcceleration"].to<JsonObject>(), s.linear);
+        payload["state"] = s.state;
+        payload["simulated"] = false;
+      },
+      output, capacity);
+}
+
 bool ProtocolAdapter::buildEvent(const char* source, const char* sessionId,
                                  uint64_t sequence, uint32_t nowMs,
                                  const char* eventId, const char* name,

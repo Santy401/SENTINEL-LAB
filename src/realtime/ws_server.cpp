@@ -308,6 +308,10 @@ void RealtimeServer::handleText(Peer& peer, const char* payload, size_t length,
       clock_->sync(message.epochMs, nowMs, ClockSource::Peer)) {
     sendHello(peer, nowMs);
   }
+  if (message.isMotion) {
+    if (motionSink_) motionSink_(motionContext_, message, nowMs);
+    return;
+  }
   if (strcmp(message.type, "connection.hello") == 0) {
     peer.session.markHello();
     sendHello(peer, nowMs);

@@ -13,11 +13,13 @@
 	<key>CFBundleDisplayName</key>
 	<string>SENTINEL-LAB</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>1.1.0</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>2</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMotionUsageDescription</key>
+	<string>SENTINEL-LAB mide la aceleración, la gravedad y la orientación del iPhone para el laboratorio de física y para enviarlas al ESP32.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>SENTINEL-LAB se conecta al ESP32 del laboratorio en tu red Wi-Fi local para leer su estado y telemetría RF.</string>
 	<key>NSAppTransportSecurity</key>

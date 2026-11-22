@@ -13,6 +13,8 @@ struct DashboardView: View {
                     if model.realtimeStatus == nil && model.deviceState == nil && !model.isDemo {
                         noDeviceState
                     } else {
+                        physicalCard
+                        DistanceCard()
                         metrics
                         healthCard
                     }
@@ -63,6 +65,27 @@ struct DashboardView: View {
                 Label(error, systemImage: "network.slash")
                     .foregroundStyle(.secondary).font(.footnote)
             }
+        }
+    }
+
+    /// Live link between the phone's motion and the ESP32's physical RGB LED.
+    private var physicalCard: some View {
+        SectionCard(title: "Laboratorio físico", symbol: "lightbulb.led") {
+            VirtualLed(rgb: model.realtimeStatus?.rgb)
+            let metrics = model.motion.snapshot.metrics
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Agitación del iPhone").font(.caption).foregroundStyle(.secondary)
+                    Text(String(format: "%.2f m/s² · %.3f N", metrics.rmsMs2, metrics.forceNewtons))
+                        .font(.title3.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(LabPalette.intensityColor(metrics.intensity))
+                }
+                Spacer()
+                Gauge(value: metrics.intensity) { Text("Intensidad") }
+                    .gaugeStyle(.accessoryCircularCapacity)
+                    .tint(LabPalette.intensityColor(metrics.intensity))
+            }
+            Text(model.motionStreamLabel).font(.caption).foregroundStyle(.secondary)
         }
     }
 

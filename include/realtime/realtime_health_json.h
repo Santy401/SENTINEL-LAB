@@ -38,6 +38,26 @@ inline void writeRealtimeHealth(const RealtimeHealthView& health,
   doc["handshakeTimeouts"] = health.handshakeTimeouts;
   doc["idleTimeouts"] = health.idleTimeouts;
   doc["remoteCloses"] = health.remoteCloses;
+  JsonObject rgb = doc["rgb"].to<JsonObject>();
+  rgb["enabled"] = health.rgbEnabled;
+  rgb["pin"] = health.rgbPin;
+  rgb["mode"] = health.rgbMode;
+  rgb["r"] = health.rgbR;
+  rgb["g"] = health.rgbG;
+  rgb["b"] = health.rgbB;
+  JsonObject phone = doc["phoneMotion"].to<JsonObject>();
+  phone["active"] = health.phoneActive;
+  if (health.phoneHasSample) {
+    phone["deviceId"] = health.phoneDeviceId;
+    phone["sampleAgeMs"] = health.phoneSampleAgeMs;
+  } else {
+    phone["deviceId"] = nullptr;
+    phone["sampleAgeMs"] = nullptr;
+  }
+  phone["linearAccelMs2"] = health.phoneLinearMs2;
+  phone["intensity"] = health.phoneIntensity;
+  phone["peakMs2"] = health.phonePeakMs2;
+  phone["samples"] = health.phoneSamples;
 }
 
 }  // namespace realtime
