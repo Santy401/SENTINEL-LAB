@@ -1,0 +1,6 @@
+# xtool build configuration (Linux). See docs/ios/LINUX.md.
+version: 1
+bundleID: lab.sentinel.app
+product: SentinelLab
+infoPath: xtool-config/Info.plist
+iconPath: xtool-config/AppIcon.png
