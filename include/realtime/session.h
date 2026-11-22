@@ -25,15 +25,22 @@ struct InboundMessage {
   char role[32]{};
   char supportedVersion[16]{};
   int64_t epochMs = 0;
+  // True only for an authenticated, privileged session (role gateway or ios
+  // with a valid bearer token). Unauthenticated peers never move the clock.
   bool syncClock = false;
+  bool privileged = false;
 };
 
 // Per-connection identity and outbound sequence. The triple source +
 // sessionId + sequence is unique because sessionId embeds the boot identifier,
 // a producer kind, the connection slot and a process-wide generation counter.
-// A reconnect into the same slot therefore never reuses a sessionId. The first
-// accepted inbound source is bound to the connection so later frames cannot
-// change the peer identity mid-session.
+// A reconnect into the same slot therefore never reuses a sessionId.
+//
+// Inbound identity belongs to the client: Protocol v1 deduplicates on the
+// sender's own source + sessionId + sequence, so a client cannot be required
+// to echo the firmware's sessionId (it only learns it after the first server
+// frame, which in turn needs a synchronized clock). The first accepted source
+// and sessionId are bound to the connection; later frames cannot change them.
 class SessionState {
  public:
   void begin(uint8_t slot, const char* bootId, bool system = false);
@@ -46,6 +53,9 @@ class SessionState {
   bool hasInboundSource() const { return inboundSource_[0] != '\0'; }
   const char* inboundSource() const { return inboundSource_; }
   void bindInboundSource(const char* source);
+  bool hasInboundSessionId() const { return inboundSessionId_[0] != '\0'; }
+  const char* inboundSessionId() const { return inboundSessionId_; }
+  void bindInboundSessionId(const char* sessionId);
   bool helloReceived() const { return helloReceived_; }
   void markHello() { helloReceived_ = true; }
   bool privileged() const { return privileged_; }
@@ -54,6 +64,7 @@ class SessionState {
  private:
   char sessionId_[65]{};
   char inboundSource_[65]{};
+  char inboundSessionId_[65]{};
   uint64_t sequence_ = 0;
   uint64_t lastInboundSequence_ = 0;
   bool hasInboundSequence_ = false;

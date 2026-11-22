@@ -40,6 +40,9 @@ const rf::EventEngine& firmwareEvents() {
 }
 
 uint32_t firmwareFreeHeapBytes() { return gTestFreeHeap; }
+uint32_t firmwareLargestFreeBlockBytes() { return gTestFreeHeap / 2; }
+uint32_t firmwareLoopStackFreeBytes() { return 4096; }
+const char* firmwareResetReason() { return "POWERON"; }
 
 }  // namespace realtime
 

@@ -9,6 +9,7 @@
 #include <WiFi.h>
 #ifdef SENTINEL_REALTIME
 #include "realtime/realtime_health.h"
+#include "realtime/realtime_health_json.h"
 #endif
 namespace sentinel { namespace rf {
 namespace {
@@ -214,19 +215,7 @@ void registerRoutes(WebServer& server) {
       error(503,"realtime core inactive");return;
     }
     JsonDocument doc;
-    doc["fw"]=health.fw;
-    doc["realtimeVersion"]=health.realtimeVersion;
-    doc["bootId"]=health.bootId;
-    doc["uptimeMs"]=health.uptimeMs;
-    doc["clockSynced"]=health.clockSynced;
-    doc["clientCount"]=health.clientCount;
-    doc["freeHeapBytes"]=health.freeHeapBytes;
-    doc["minFreeHeapBytes"]=health.minFreeHeapBytes;
-    doc["heapSamples"]=health.heapSamples;
-    doc["droppedFrames"]=health.droppedFrames;
-    doc["rejectedMessages"]=health.rejectedMessages;
-    doc["droppedTelemetry"]=health.droppedTelemetry;
-    doc["skippedSimulatedEvents"]=health.skippedSimulatedEvents;
+    sentinel::realtime::writeRealtimeHealth(health,doc);
     send(doc);
   });
 #endif

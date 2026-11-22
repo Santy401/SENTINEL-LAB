@@ -69,15 +69,31 @@ int64_t floorDiv(int64_t value, int64_t divisor) {
 
 }  // namespace
 
-void UtcClock::sync(int64_t epochMs, uint32_t monotonicMs) {
-  if (epochMs < kMinSyncEpochMs || epochMs > kMaxSyncEpochMs) return;
+const char* clockSourceName(ClockSource source) {
+  switch (source) {
+    case ClockSource::Ntp:
+      return "ntp";
+    case ClockSource::Peer:
+      return "peer";
+    default:
+      return "none";
+  }
+}
+
+bool UtcClock::sync(int64_t epochMs, uint32_t monotonicMs,
+                    ClockSource source) {
+  if (epochMs < kMinSyncEpochMs || epochMs > kMaxSyncEpochMs) return false;
+  if (source == ClockSource::None) return false;
   epochAtSync_ = epochMs;
   monotonicAtSync_ = monotonicMs;
+  source_ = source;
   synced_ = true;
+  return true;
 }
 
 void UtcClock::clear() {
   synced_ = false;
+  source_ = ClockSource::None;
   epochAtSync_ = 0;
   monotonicAtSync_ = 0;
 }

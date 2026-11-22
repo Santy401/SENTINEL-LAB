@@ -106,6 +106,47 @@ std::string goodbye(uint64_t sequence) {
   return text;
 }
 
+std::string iosHello(uint64_t sequence, const char* timestamp) {
+  JsonDocument document;
+  document["protocolVersion"] = kProtocolVersion;
+  document["type"] = "connection.hello";
+  document["timestamp"] = timestamp;
+  document["sequence"] = sequence;
+  document["source"] = "ios-app";
+  document["sessionId"] = "ios-session-1";
+  JsonObject payload = document["payload"].to<JsonObject>();
+  payload["deviceId"] = "iphone-12";
+  payload["role"] = "ios";
+  payload["supportedVersion"] = kProtocolVersion;
+  payload["capabilities"].to<JsonArray>().add("telemetry.view");
+  std::string text;
+  serializeJson(document, text);
+  return text;
+}
+
+std::string iosHeartbeat(uint64_t sequence) {
+  JsonDocument document;
+  document["protocolVersion"] = kProtocolVersion;
+  document["type"] = "connection.heartbeat";
+  document["timestamp"] = "2026-11-21T16:10:05.000Z";
+  document["sequence"] = sequence;
+  document["source"] = "ios-app";
+  document["sessionId"] = "ios-session-1";
+  document["payload"]["uptimeMs"] = 1000;
+  std::string text;
+  serializeJson(document, text);
+  return text;
+}
+
+size_t countOf(const std::string& haystack, const std::string& needle) {
+  size_t count = 0;
+  for (size_t at = haystack.find(needle); at != std::string::npos;
+       at = haystack.find(needle, at + needle.size())) {
+    ++count;
+  }
+  return count;
+}
+
 void finishHandshake(RealtimeServer& server, WiFiClient& client,
                      uint32_t nowMs) {
   server.loop(nowMs);
@@ -251,6 +292,185 @@ int main() {
     pendingClock.sync(1795277402100LL, 5001);
     pendingServer.loop(5002);
     assert(waiting.sent().find("connection.hello") != std::string::npos);
+  }
+
+  // Handshake deadline: a socket that never sends the upgrade request is
+  // answered with 408 and its slot is released after kHandshakeTimeoutMs.
+  {
+    RealtimeServer s;
+    s.begin(81, "boottimeout", clock, adapter, auth);
+    gPendingWiFiClients.clear();
+    WiFiClient silent = WiFiClient::create();
+    gPendingWiFiClients.push_back(silent);
+    s.loop(10000);
+    assert(silent.connected());
+    s.loop(10000 + RealtimeServer::kHandshakeTimeoutMs);
+    assert(silent.connected());
+    s.loop(10001 + RealtimeServer::kHandshakeTimeoutMs);
+    assert(!silent.connected());
+    assert(silent.sent().find("408 Request Timeout") != std::string::npos);
+    assert(s.handshakeTimeouts() == 1);
+
+    // Slow-drip partial request is bounded by the same deadline.
+    WiFiClient drip = WiFiClient::create();
+    drip.push("GET /realtime HTTP/1.1\r\nHost: x\r\n");
+    gPendingWiFiClients.push_back(drip);
+    s.loop(20000);
+    drip.push("Upgrade: websocket\r\n");
+    s.loop(20000 + RealtimeServer::kHandshakeTimeoutMs + 1);
+    assert(!drip.connected());
+    assert(s.handshakeTimeouts() == 2);
+
+    // A client that disconnects before upgrading frees its slot at once.
+    WiFiClient gone = WiFiClient::create();
+    gPendingWiFiClients.push_back(gone);
+    s.loop(30000);
+    gone.finish();
+    s.loop(30001);
+    assert(s.remoteCloses() == 1);
+
+    // All four slots are free again for real clients.
+    std::vector<WiFiClient> fresh;
+    for (int i = 0; i < 4; ++i) fresh.push_back(connectClient(false));
+    s.loop(30002);
+    s.loop(30003);
+    assert(s.clientCount() == 4);
+  }
+
+  // TCP FIN without a Close frame releases the slot on the next loop instead
+  // of after the 60 s idle timeout.
+  {
+    RealtimeServer s;
+    s.begin(81, "bootfin", clock, adapter, auth);
+    gPendingWiFiClients.clear();
+    WiFiClient half = connectClient(false);
+    finishHandshake(s, half, 40000);
+    assert(s.clientCount() == 1);
+    half.finish();
+    s.loop(40002);
+    assert(s.clientCount() == 0);
+    assert(s.remoteCloses() == 1);
+  }
+
+  // Keepalive: the server pings every kPingIntervalMs; a passive client whose
+  // stack answers with Pong stays connected past the idle timeout, and one
+  // that never answers is closed with status 1001 once idle.
+  {
+    RealtimeServer s;
+    s.begin(81, "bootping", clock, adapter, auth);
+    gPendingWiFiClients.clear();
+    WiFiClient passive = connectClient(false);
+    WiFiClient mute = connectClient(false);
+    finishHandshake(s, passive, 50000);
+    s.loop(50002);
+    assert(s.clientCount() == 2);
+    passive.clearSent();
+    mute.clearSent();
+    const uint32_t firstPing = 50001 + RealtimeServer::kPingIntervalMs;
+    s.loop(firstPing);
+    const std::string ping("\x89\x00", 2);
+    assert(passive.sent().find(ping) != std::string::npos);
+    assert(mute.sent().find(ping) != std::string::npos);
+
+    uint32_t now = firstPing;
+    for (int i = 0; i < 4; ++i) {
+      passive.push(maskedFrame(WsOpcode::Pong, ""));
+      now += RealtimeServer::kPingIntervalMs;
+      s.loop(now);
+    }
+    // now is 80 s after the handshake: the passive peer survived, the mute one
+    // exceeded the 60 s idle limit.
+    assert(passive.connected());
+    assert(!mute.connected());
+    const std::string goingAway("\x88\x02\x03\xe9", 4);
+    assert(mute.sent().find(goingAway) != std::string::npos);
+    assert(s.idleTimeouts() == 1);
+    assert(s.clientCount() == 1);
+  }
+
+  // The iPhone app as time authority: an authenticated role "ios" hello syncs
+  // the clock; without the bearer token it does not.
+  {
+    UtcClock iosClock;
+    ProtocolAdapter iosAdapter(iosClock);
+    RealtimeServer s;
+    s.begin(81, "bootios", iosClock, iosAdapter, auth);
+    gPendingWiFiClients.clear();
+
+    WiFiClient anonymous = connectClient(false);
+    finishHandshake(s, anonymous, 60000);
+    anonymous.push(maskedFrame(WsOpcode::Text,
+                               iosHello(1, "2026-11-21T16:10:02.100Z")));
+    s.loop(60002);
+    assert(!iosClock.synced());
+    assert(anonymous.sent().find("connection.hello") == std::string::npos);
+
+    WiFiClient phone = connectClient(true);
+    s.loop(60003);
+    s.loop(60004);
+    phone.push(maskedFrame(WsOpcode::Text,
+                           iosHello(1, "2026-11-21T16:10:02.100Z")));
+    s.loop(60005);
+    assert(iosClock.synced());
+    assert(iosClock.source() == ClockSource::Peer);
+    s.loop(60006);
+    assert(phone.sent().find("connection.hello") != std::string::npos);
+    // The peer that connected earlier also receives its pending hello.
+    assert(anonymous.sent().find("connection.hello") != std::string::npos);
+
+    // Its heartbeat re-syncs the clock at the new monotonic reference.
+    phone.push(maskedFrame(WsOpcode::Text, iosHeartbeat(2)));
+    s.loop(70000);
+    assert(iosClock.syncedAtMs() == 70000);
+
+    // A client-owned sessionId cannot change mid-connection.
+    phone.clearSent();
+    std::string switched = iosHeartbeat(3);
+    const std::string from = "ios-session-1";
+    switched.replace(switched.find(from), from.size(), "ios-session-2");
+    phone.push(maskedFrame(WsOpcode::Text, switched));
+    s.loop(70001);
+    s.loop(70002);
+    assert(phone.sent().find("UNAUTHORIZED") != std::string::npos);
+  }
+
+  // Rate limiting answers a flood with a single RATE_LIMITED error per window.
+  {
+    RealtimeServer s;
+    s.begin(81, "bootrate", clock, adapter, auth);
+    gPendingWiFiClients.clear();
+    WiFiClient flood = connectClient(false);
+    finishHandshake(s, flood, 80000);
+    flood.clearSent();
+    for (uint64_t seq = 1; seq <= 14; ++seq) {
+      flood.push(maskedFrame(WsOpcode::Text, iosHeartbeat(seq)));
+    }
+    for (int i = 0; i < 12; ++i) s.loop(80002);
+    assert(countOf(flood.sent(), "RATE_LIMITED") == 1);
+    assert(flood.connected());
+  }
+
+  // Hardware regression (2026-11-21): the sync hello plus three periodic
+  // envelopes in the same loop overflowed a two-frame queue. With kTxDepth = 3
+  // the hello drains first and the burst of three fits without drops.
+  {
+    UtcClock burstClock;
+    ProtocolAdapter burstAdapter(burstClock);
+    RealtimeServer s;
+    s.begin(81, "bootburst", burstClock, burstAdapter, auth);
+    gPendingWiFiClients.clear();
+    WiFiClient gateway = connectClient(true);
+    finishHandshake(s, gateway, 90000);
+    gateway.push(maskedFrame(WsOpcode::Text, gatewayHello(1)));
+    s.loop(90002);
+    assert(burstClock.synced());
+    const std::string frame = "{\"type\":\"x\"}";
+    s.broadcast(frame.data(), frame.size());
+    s.broadcast(frame.data(), frame.size());
+    s.broadcast(frame.data(), frame.size());
+    s.loop(90003);
+    assert(s.droppedFrames() == 0);
+    assert(countOf(gateway.sent(), frame) == 3);
   }
 
   std::puts("test_ws_server: ALL TESTS PASSED");

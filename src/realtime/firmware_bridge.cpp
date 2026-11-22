@@ -5,6 +5,10 @@
 #include "v02/web_dashboard.h"
 
 #include <Arduino.h>
+#include <esp_system.h>
+#include <esp_heap_caps.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #include <cmath>
 #include <stdio.h>
@@ -120,6 +124,47 @@ const rf::EventEngine& firmwareEvents() { return rf::realtimeEvents(); }
 
 uint32_t firmwareFreeHeapBytes() {
   return static_cast<uint32_t>(ESP.getFreeHeap());
+}
+
+uint32_t firmwareLargestFreeBlockBytes() {
+  return static_cast<uint32_t>(
+      heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+}
+
+uint32_t firmwareLoopStackFreeBytes() {
+  // ESP-IDF reports the high-water mark in bytes (StackType_t is uint8_t).
+  return static_cast<uint32_t>(uxTaskGetStackHighWaterMark(nullptr));
+}
+
+const char* firmwareResetReason() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON:
+      return "POWERON";
+    case ESP_RST_EXT:
+      return "EXT";
+    case ESP_RST_SW:
+      return "SW";
+    case ESP_RST_PANIC:
+      return "PANIC";
+    case ESP_RST_INT_WDT:
+      return "INT_WDT";
+    case ESP_RST_TASK_WDT:
+      return "TASK_WDT";
+    case ESP_RST_WDT:
+      return "WDT";
+    case ESP_RST_DEEPSLEEP:
+      return "DEEPSLEEP";
+    case ESP_RST_BROWNOUT:
+      return "BROWNOUT";
+    case ESP_RST_SDIO:
+      return "SDIO";
+    case ESP_RST_USB:
+      return "USB";
+    case ESP_RST_JTAG:
+      return "JTAG";
+    default:
+      return "UNKNOWN";
+  }
 }
 
 }  // namespace realtime

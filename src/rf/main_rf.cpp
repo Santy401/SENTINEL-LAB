@@ -8,6 +8,7 @@ using namespace sentinel::v02;
 namespace { MotionEngine engine; LedIndicator leds; WiFiApInfo wifi; WebDashboard dashboard; }
 #ifdef SENTINEL_REALTIME
 #include "realtime/auth.h"
+#include "realtime/firmware_bridge.h"
 #include "realtime/realtime_core.h"
 #include "rf/realtime_access.h"
 #if __has_include("secrets.h")
@@ -33,7 +34,9 @@ void setup() {
   sentinel::rf::beginRf();
   dashboard.begin(engine, leds, wifi);
 #ifdef SENTINEL_REALTIME
-  Serial.println("SENTINEL realtime core 0.4.0 | WebSocket :81");
+  Serial.printf("SENTINEL realtime core %s | WebSocket :81 | reset=%s\n",
+                sentinel::realtime::kFirmwareVersion,
+                sentinel::realtime::firmwareResetReason());
   realtime.begin(81, sentinel::rf::realtimeBootId(), realtimeAuth);
 #endif
 }

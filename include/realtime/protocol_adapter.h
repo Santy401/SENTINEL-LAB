@@ -14,7 +14,10 @@ namespace realtime {
 // adapter intentionally uses a smaller bounded transport buffer.
 constexpr size_t kProtocolMessageBytes = 1016;
 constexpr char kProtocolVersion[] = "1.0.0";
-constexpr char kFirmwareVersion[] = "0.4.0";
+// Version of the realtime firmware image. The HTTP API keeps reporting
+// kHttpApiVersion in /api/state ("fw") so v0.3.1 clients stay compatible.
+constexpr char kFirmwareVersion[] = "0.4.1";
+constexpr char kHttpApiVersion[] = "0.3.1";
 
 struct RfClientView {
   uint32_t clientId = 0;
