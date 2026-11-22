@@ -7,6 +7,12 @@ import { Events } from "@/views/Events";
 import { Overview } from "@/views/Overview";
 import { SettingsView } from "@/views/SettingsView";
 import { Telemetry } from "@/views/Telemetry";
+import { Lab } from "@/views/Lab";
+import { Radar } from "@/views/Radar";
+import { Motion } from "@/views/Motion";
+import { Experiments } from "@/views/Experiments";
+import { Exhibition } from "@/views/Exhibition";
+import { BoardViewer } from "@/ui/BoardViewer";
 
 // Server-side render smoke test: every view renders real DEMO data and the
 // empty/loading states without throwing. It does not replace a browser check.
@@ -60,5 +66,49 @@ describe("views", () => {
     expect(render(<Overview snapshot={empty} />)).toContain("Cargando estado");
     expect(render(<Telemetry snapshot={empty} />)).toContain("Sin telemetría RF");
     expect(render(<Events snapshot={empty} />)).toContain("Sin eventos");
+  });
+});
+
+describe("physical lab views (no WebGL: SVG fallback)", () => {
+  it("collects DEMO motion samples and RGB state", () => {
+    expect(demo.motionSamples.length).toBeGreaterThan(50);
+    expect(demo.realtimeStatus?.rgb?.enabled).toBe(true);
+    expect(demo.rgbLog.length).toBeGreaterThan(0);
+  });
+
+  it("renders the lab hero with the static board and instruments", () => {
+    const html = render(<Lab snapshot={demo} onNavigate={() => {}} />);
+    expect(html).toContain("Laboratorio físico conectado");
+    expect(html).toContain("Vista superior de la placa ESP32-S3-DevKitC-1");
+    expect(html).toContain("Vista estática (WebGL no disponible)");
+    expect(html).toContain("Agitación del iPhone");
+    expect(html).toContain("DEMO");
+  });
+
+  it("renders the board viewer without a snapshot", () => {
+    const html = render(<BoardViewer led={null} ledMode={null} connected={false} pulseKey={0} forceFallback />);
+    expect(html).toContain("LED RGB WS2812");
+  });
+
+  it("renders the radar with the honesty note and theoretical range", () => {
+    const html = render(<Radar snapshot={demo} />);
+    expect(html).toContain("La posición angular no se mide");
+    expect(html).toContain("Alcance teórico");
+    expect(render(<Radar snapshot={empty} />)).toContain("Sin clientes asociados");
+  });
+
+  it("renders the motion analyzer with force as an estimate", () => {
+    const html = render(<Motion snapshot={demo} />);
+    expect(html).toContain("Fuerza estimada F = m·a");
+    expect(html).toContain("estimación");
+    expect(html).toContain("No calculado");
+    expect(render(<Motion snapshot={empty} />)).toContain("Sin muestras de movimiento");
+  });
+
+  it("renders experiments and the exhibition tour", () => {
+    expect(render(<Experiments snapshot={demo} />)).toContain("Gravedad y orientación");
+    const tour = render(<Exhibition snapshot={demo} onClose={() => {}} />);
+    expect(tour).toContain("¿Qué problema resuelve?");
+    expect(tour).toContain("DEMO");
   });
 });
