@@ -100,6 +100,8 @@ CI (`.github/workflows/ios.yml`) ejecuta `swift test` en un contenedor
 para dispositivo **sin firmar** (`CODE_SIGNING_ALLOWED=NO`). Un binario sin
 firmar no se puede instalar en un iPhone.
 
+> Desde Linux, sin Mac: ver [LINUX.md](LINUX.md) (xtool).
+
 ## Instalar en el iPhone 12 (proceso real)
 
 Requisitos ineludibles para instalar una app propia en un iPhone sin jailbreak:
