@@ -81,6 +81,30 @@ npm run sync-fixtures  # copia build/firmware-*.json tras python3 tools/check_so
 
 Para usarlo con el ESP32, el equipo debe estar conectado al AP `SENTINEL-LAB`.
 
+## Servida desde el ESP32 (v0.4.2, uso normal)
+
+El firmware realtime incluye esta web y la sirve en `http://192.168.4.1/`. Basta
+con unir el móvil o el portátil a la Wi-Fi `SENTINEL-LAB` y abrir esa URL.
+
+1. *Ajustes → Token de tiempo real*: pega el token
+   (`~/.config/sentinel-lab/realtime-token`) y pulsa *Guardar token*. Se guarda
+   solo en ese navegador.
+2. La web reconecta, pone en hora el ESP32 y empieza a recibir el stream.
+3. Sin token también funciona, pero en solo lectura: estado y RF por HTTP, y
+   stream solo si otro cliente con token (gateway o iPhone) ya puso el reloj
+   en hora.
+
+Para actualizar la web incrustada:
+
+```bash
+(cd apps/web && npm run build)
+python3 tools/embed_web.py            # regenera web_assets/*.gz (determinista)
+pio run -e sentinel_esp32s3_n16r8_realtime
+```
+
+El CI comprueba con `tools/embed_web.py --check` que `web_assets/` corresponde
+al código de `apps/web`. El panel v0.3.1 sigue disponible en `/legacy`.
+
 ## Ejecución con el gateway
 
 `npm run build` y después el gateway sirve `apps/web/dist` en su puerto HTTP local

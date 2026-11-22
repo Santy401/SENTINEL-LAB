@@ -53,7 +53,7 @@ describe("views", () => {
     expect(render(<Events snapshot={demo} />)).toContain("Eventos recientes");
     const diagnostics = render(<Diagnostics snapshot={demo} appVersion="0.1.0" />);
     expect(diagnostics).toContain("Evidencia no sensible");
-    expect(render(<SettingsView snapshot={demo} settings={demo.settings} onChange={() => {}} />)).toContain("Modo DEMO");
+    expect(render(<SettingsView snapshot={demo} settings={demo.settings} onChange={() => {}} onToken={() => {}} />)).toContain("Modo DEMO");
   });
 
   it("renders loading and empty states before any data", () => {

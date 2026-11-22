@@ -197,8 +197,13 @@ void RealtimeServer::handleHandshake(Peer& peer, size_t slot, uint32_t nowMs) {
   }
 
   peer.handshake = true;
-  peer.authenticated = auth_ && auth_->verifyBearer(
-                           request.authorization, strlen(request.authorization));
+  peer.authenticated =
+      auth_ && (auth_->verifyBearer(request.authorization,
+                                    strlen(request.authorization)) ||
+                auth_->verifyToken(request.protocolToken,
+                                   strlen(request.protocolToken)));
+  memset(request.authorization, 0, sizeof(request.authorization));
+  memset(request.protocolToken, 0, sizeof(request.protocolToken));
   peer.session.begin(static_cast<uint8_t>(slot), bootId_);
   peer.lastActivity = nowMs;
   peer.lastPing = nowMs;

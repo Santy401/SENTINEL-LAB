@@ -16,6 +16,8 @@ enum class HandshakeStatus {
 struct HandshakeRequest {
   char key[128]{};
   char authorization[160]{};
+  // Token offered as the "sentinel.auth.<token>" subprotocol (browsers).
+  char protocolToken[129]{};
   bool upgrade = false;
   bool connection = false;
   bool versionPresent = false;

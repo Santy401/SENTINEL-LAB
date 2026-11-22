@@ -85,6 +85,35 @@ bool hasToken(const char* value, size_t length, const char* token,
   return false;
 }
 
+// Browsers cannot set Authorization on a WebSocket. A client may instead
+// offer "sentinel.auth.<token>" next to "sentinel.v1"; the server never echoes
+// it (only sentinel.v1 is selected). Copies the token when it fits.
+void findAuthSubprotocol(const char* value, size_t length, char* output,
+                         size_t capacity) {
+  static const char kPrefix[] = "sentinel.auth.";
+  constexpr size_t kPrefixLength = sizeof(kPrefix) - 1;
+  while (length) {
+    while (length && (*value == ' ' || *value == '\t' || *value == ',')) {
+      ++value;
+      --length;
+    }
+    size_t tokenLength = 0;
+    while (tokenLength < length && value[tokenLength] != ',' &&
+           value[tokenLength] != ' ' && value[tokenLength] != '\t') {
+      ++tokenLength;
+    }
+    if (tokenLength > kPrefixLength &&
+        strncmp(value, kPrefix, kPrefixLength) == 0 &&
+        tokenLength - kPrefixLength < capacity) {
+      memcpy(output, value + kPrefixLength, tokenLength - kPrefixLength);
+      output[tokenLength - kPrefixLength] = '\0';
+      return;
+    }
+    value += tokenLength;
+    length -= tokenLength;
+  }
+}
+
 int base64Index(char value) {
   if (value >= 'A' && value <= 'Z') return value - 'A';
   if (value >= 'a' && value <= 'z') return value - 'a' + 26;
@@ -251,6 +280,10 @@ bool parseHandshake(const char* request, size_t length,
       const char* value = trim(line + strlen(kHeader), valueLength);
       if (hasToken(value, valueLength, kSubprotocol, false)) {
         result.subprotocol = true;
+      }
+      if (!result.protocolToken[0]) {
+        findAuthSubprotocol(value, valueLength, result.protocolToken,
+                            sizeof(result.protocolToken));
       }
     } else if (startsWithIgnoreCase(line, lineLength, "Sec-WebSocket-Key:")) {
       constexpr char kHeader[] = "Sec-WebSocket-Key:";

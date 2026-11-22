@@ -162,5 +162,30 @@ int main() {
   badPadding.key = "dGhlIHNhbXBsZSBub25jZf==";
   expectInvalid(badPadding, HandshakeStatus::BadRequest);
 
+  // Browser token: offered as a second subprotocol, captured, never required.
+  RequestOptions browserToken;
+  browserToken.protocol = "sentinel.v1, sentinel.auth.abc123def";
+  HandshakeRequest withToken;
+  assert(parse(buildRequest(browserToken), withToken));
+  assert(std::strcmp(withToken.protocolToken, "abc123def") == 0);
+  assert(withToken.authorization[0] == '\0');
+  RequestOptions tokenFirst;
+  tokenFirst.protocol = "sentinel.auth.zz9, sentinel.v1";
+  assert(parse(buildRequest(tokenFirst), withToken));
+  assert(std::strcmp(withToken.protocolToken, "zz9") == 0);
+  // The token alone does not select the protocol.
+  RequestOptions tokenOnly;
+  tokenOnly.protocol = "sentinel.auth.abc123def";
+  expectInvalid(tokenOnly, HandshakeStatus::BadRequest);
+  // Empty token and oversize token are ignored, not truncated.
+  RequestOptions emptyToken;
+  emptyToken.protocol = "sentinel.v1, sentinel.auth.";
+  assert(parse(buildRequest(emptyToken), withToken));
+  assert(withToken.protocolToken[0] == '\0');
+  RequestOptions hugeToken;
+  hugeToken.protocol = "sentinel.v1, sentinel.auth." + std::string(200, 'a');
+  assert(parse(buildRequest(hugeToken), withToken));
+  assert(withToken.protocolToken[0] == '\0');
+
   std::puts("test_handshake: ALL TESTS PASSED");
 }

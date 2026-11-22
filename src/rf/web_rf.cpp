@@ -10,6 +10,7 @@
 #ifdef SENTINEL_REALTIME
 #include "realtime/realtime_health.h"
 #include "realtime/realtime_health_json.h"
+#include "realtime/web_app.h"
 #endif
 namespace sentinel { namespace rf {
 namespace {
@@ -103,7 +104,14 @@ void registerRoutes(WebServer& server) {
     send(doc);
   });
   server.on("/capture",HTTP_GET,[]{http->send_P(200,"text/html; charset=utf-8",kCaptureHtml);});
+#ifdef SENTINEL_REALTIME
+  // Realtime image: the Arc web dashboard owns "/"; the v0.3.1 page stays
+  // reachable at /legacy as a no-flash fallback.
+  sentinel::realtime::registerWebApp(server);
+  server.on("/legacy",HTTP_GET,[]{http->send_P(200,"text/html; charset=utf-8",kRfDashboard);});
+#else
   server.on("/",HTTP_GET,[]{http->send_P(200,"text/html; charset=utf-8",kRfDashboard);});
+#endif
   server.on("/api/rf",HTTP_GET,[]{
     JsonDocument doc; doc["bootId"]=bootId; doc["fw"]="0.3.1"; doc["uptimeMs"]=millis();
     doc["mode"]=WiFi.getMode()==WIFI_AP_STA?"AP+STA":"AP";

@@ -12,6 +12,8 @@ class AuthGuard {
   explicit AuthGuard(const char* configuredToken) : token_(configuredToken) {}
 
   bool verifyBearer(const char* header, size_t length) const;
+  // Raw token comparison (constant time), used for the browser subprotocol.
+  bool verifyToken(const char* token, size_t length) const;
 
   // Only a gateway session may synchronize the firmware clock. Telemetry
   // remains readable by every local laboratory client.

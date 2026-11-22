@@ -34,7 +34,7 @@ host('test_session',['test/test_session.cpp','src/realtime/session.cpp','src/rea
 host('test_ws_server',['test/test_ws_server.cpp','src/realtime/ws_server.cpp','src/realtime/auth.cpp','src/realtime/frame_codec.cpp','src/realtime/handshake.cpp','src/realtime/protocol_adapter.cpp','src/realtime/session.cpp','src/realtime/time_source.cpp'],['-Itest/stubs']+ARDUINOJSON)
 HEALTH_STUBS=['-Itest/health_stubs','test/health_stubs.cpp']
 HEALTH_SOURCES=['src/realtime/realtime_core.cpp','src/realtime/auth.cpp','src/realtime/protocol_adapter.cpp','src/realtime/session.cpp','src/realtime/time_source.cpp']
-WEB_SOURCES=['src/rf/web_rf.cpp']+HEALTH_SOURCES
+WEB_SOURCES=['src/rf/web_rf.cpp','src/realtime/web_app.cpp','test/web_app_stub.cpp']+HEALTH_SOURCES
 WEB_INCLUDES=['-Itest/web_stubs','-Itest/health_stubs','-Isrc']+ARDUINOJSON
 host('test_health',['test/test_health.cpp']+HEALTH_SOURCES+HEALTH_STUBS,['-Itest/stubs']+ARDUINOJSON)
 host('test_web_route_realtime',['test/test_web_route.cpp']+WEB_SOURCES+HEALTH_STUBS,WEB_INCLUDES,['-DSENTINEL_REALTIME=1'])
@@ -74,4 +74,6 @@ run(['g++','-std=c++17','-Wall','-Wextra','-Werror','-Iinclude','-Itest/posix_st
      'src/realtime/frame_codec.cpp','src/realtime/handshake.cpp','src/realtime/protocol_adapter.cpp',
      'src/realtime/session.cpp','src/realtime/time_source.cpp','-o','build/host_device'])
 run([sys.executable,'tools/tests/test_gateway.py','-v'])
+if Path('apps/web/dist/index.html').is_file():
+    run([sys.executable,'tools/embed_web.py','--check'])
 print('Gateway unit, HTTP and emulator integration tests OK')

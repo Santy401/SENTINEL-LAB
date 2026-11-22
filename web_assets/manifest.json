@@ -1,0 +1,22 @@
+{
+  "files": {
+    "app.css.gz": {
+      "bytes": 16245,
+      "sha256": "8535a5bb10fe70c62a85537acd6dbdf21f88187e75be16e2d15088cc5a14c194"
+    },
+    "app.js.gz": {
+      "bytes": 222239,
+      "sha256": "6734fe583a5fabf8f1df843ed94342c5a91ccc4b78a045f907de8d0bd9167cce"
+    },
+    "index.html.gz": {
+      "bytes": 491,
+      "sha256": "ae10149b1cbba48ad0254f9473e2a2f5eb45f7e4de9222a6257fd71bca2921bc"
+    }
+  },
+  "source": "apps/web/dist",
+  "uncompressed": {
+    "app.css": 89460,
+    "app.js": 693545,
+    "index.html": 921
+  }
+}
