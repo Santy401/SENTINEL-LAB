@@ -1,0 +1,82 @@
+/* Layout for the SENTINEL-LAB dashboard. Colours, radii and type come from
+   Arc's foundation tokens; nothing here redefines the palette. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: var(--tracking-display); line-height: var(--leading-display); margin: 0; }
+h1 { font-size: var(--text-xl); }
+h2 { font-size: var(--text-lg); }
+h3 { font-size: var(--text-base); }
+p { margin: 0; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
+
+.shell { max-width: 1240px; margin: 0 auto; padding: 0 16px 96px; }
+.header {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  padding: 14px 0; margin-bottom: 8px;
+  background: color-mix(in oklab, var(--background) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.brand-mark {
+  width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
+  background: var(--arc-gradient); color: var(--arc-gradient-foreground);
+}
+.brand small { display: block; color: var(--text-muted); font-size: var(--text-xs); }
+.header-status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.demo-banner {
+  display: flex; gap: 10px; align-items: center; margin: 12px 0;
+  padding: 10px 14px; border-radius: var(--radius-control);
+  border: 1px dashed var(--warning); color: var(--foreground);
+  background: color-mix(in oklab, var(--warning) 10%, transparent);
+  font-size: var(--text-sm);
+}
+
+.tabs-wrap { margin-top: 12px; }
+.view { display: grid; gap: 16px; padding-top: 16px; }
+.grid { display: grid; gap: 16px; }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+
+.panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-resting);
+  padding: 20px;
+  min-width: 0;
+}
+.panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.panel-head p { color: var(--text-secondary); font-size: var(--text-sm); margin-top: 2px; }
+
+.kv { display: grid; grid-template-columns: minmax(120px, auto) 1fr; gap: 8px 16px; margin: 0; font-size: var(--text-sm); }
+.kv dt { color: var(--text-secondary); }
+.kv dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+.health-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.health-item { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: baseline; font-size: var(--text-sm); }
+.health-item p { grid-column: 2; color: var(--text-secondary); }
+
+.counter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.counter { border: 1px solid var(--border-subtle); border-radius: var(--radius-control); padding: 12px 14px; }
+.counter span { display: block; color: var(--text-muted); font-size: var(--text-xs); }
+.counter strong { font-size: var(--text-xl); font-variant-numeric: tabular-nums; font-family: var(--font-display); }
+
+.sparks { display: flex; flex-wrap: wrap; gap: 16px; }
+.muted { color: var(--text-muted); font-size: var(--text-sm); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.settings-list { display: grid; gap: 18px; max-width: 560px; }
+.footer { margin-top: 40px; color: var(--text-muted); font-size: var(--text-xs); text-align: center; }
+.footer a { color: inherit; }
