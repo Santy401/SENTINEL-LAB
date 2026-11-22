@@ -39,8 +39,13 @@ from typing import Any, Callable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import hw_common as hw  # noqa: E402
+from gateway.alerts import AlertEngine  # noqa: E402
+from gateway.delivery import AlertDelivery, load_secret  # noqa: E402
+from gateway.history import DEFAULT_DB, History  # noqa: E402
+from gateway.report import build_report, render_pdf  # noqa: E402
+from gateway.runtime import GatewayRuntime, StatusPoller  # noqa: E402
 
-GATEWAY_VERSION = "0.1.0"
+GATEWAY_VERSION = "0.2.0"
 SOURCE = "sentinel-gateway"
 HEARTBEAT_INTERVAL_S = 15.0
 MAX_BACKOFF_S = 30.0
@@ -150,7 +155,8 @@ class DeviceLink(threading.Thread):
 
     def __init__(self, host: str, port: int, token: str | None, state: GatewayState,
                  log_path: Path | None = None,
-                 socket_factory: Callable[..., Any] = hw.MinimalWebSocket) -> None:
+                 socket_factory: Callable[..., Any] = hw.MinimalWebSocket,
+                 observer: Callable[[dict[str, Any]], None] | None = None) -> None:
         super().__init__(daemon=True, name="device-link")
         self.host = host
         self.port = port
@@ -158,6 +164,7 @@ class DeviceLink(threading.Thread):
         self.state = state
         self.log_path = log_path
         self.socket_factory = socket_factory
+        self.observer = observer
         self.stop_event = threading.Event()
         self.device_id = f"gateway-{uuid.uuid4().hex[:8]}"
 
@@ -224,6 +231,11 @@ class DeviceLink(threading.Thread):
         self.state.count_frame(message_type)
         if message_type == "connection.hello":
             self.state.update(deviceSessionId=message.get("sessionId"))
+        if self.observer is not None:
+            try:
+                self.observer(message)
+            except Exception as exc:  # noqa: BLE001 - never break the link
+                self.state.update(lastError=f"observer: {type(exc).__name__}")
         if message_type == "error":
             error = message.get("payload", {})
             self.state.update(lastError=f"device error {error.get('code')}: {error.get('message')}"[:200])
@@ -235,7 +247,8 @@ class DeviceLink(threading.Thread):
 
 
 def make_handler(device_host: str, ws_port: int, web_root: Path,
-                 state: GatewayState) -> type[BaseHTTPRequestHandler]:
+                 state: GatewayState, runtime: GatewayRuntime | None = None,
+                 delivery: AlertDelivery | None = None) -> type[BaseHTTPRequestHandler]:
     web_root = web_root.resolve()
 
     class Handler(BaseHTTPRequestHandler):
@@ -266,7 +279,18 @@ def make_handler(device_host: str, ws_port: int, web_root: Path,
                     "gatewayVersion": GATEWAY_VERSION,
                 })
             elif path == "/gateway/status":
-                self._json(200, state.snapshot())
+                snapshot = state.snapshot()
+                if delivery is not None:
+                    snapshot["alertDelivery"] = delivery.snapshot()
+                self._json(200, snapshot)
+            elif path == "/gateway/alerts":
+                self._json(200, {"alerts": runtime.recent_alerts() if runtime else []})
+            elif path == "/gateway/history/summary":
+                if runtime is None or runtime.history is None:
+                    self._json(200, {"enabled": False})
+                else:
+                    self._json(200, {"enabled": True, **runtime.history.summary(),
+                                     "suppressedAlerts": runtime.engine.suppressed})
             elif path.startswith("/api/"):
                 self._proxy()
             else:
@@ -329,10 +353,106 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--token-env", default="SENTINEL_GATEWAY_TOKEN")
     parser.add_argument("--log-jsonl", type=Path, help="append received frames here")
     parser.add_argument("--no-link", action="store_true", help="serve web/proxy only")
+    parser.add_argument("--db", type=Path, default=DEFAULT_DB, help="SQLite history file")
+    parser.add_argument("--no-history", action="store_true", help="do not record history")
+    parser.add_argument("--status-interval", type=float, default=10.0,
+                        help="seconds between /api/realtime/status polls")
+    parser.add_argument("--no-poll", action="store_true", help="disable HTTP status polling")
+    parser.add_argument("--alert-webhook-url",
+                        help="n8n webhook URL (https), e.g. https://n8n.example/webhook/sentinel-alerts")
+    parser.add_argument("--alert-secret-file", type=Path,
+                        help="owner-only file with the HMAC secret shared with n8n")
+    parser.add_argument("--alert-dry-run", action="store_true",
+                        help="print alerts instead of sending them")
     return parser.parse_args(argv)
 
 
+def parse_report_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="sentinel_gateway.py report",
+                                     description="Genera un informe HTML (y PDF) de una sesión.")
+    parser.add_argument("--db", type=Path, default=DEFAULT_DB)
+    parser.add_argument("--session", default="latest", help="id de sesión o 'latest'")
+    parser.add_argument("--out", type=Path, default=Path("sentinel-report.html"))
+    parser.add_argument("--pdf", action="store_true", help="también genera PDF (Chromium headless)")
+    parser.add_argument("--list", action="store_true", help="lista las sesiones guardadas")
+    return parser.parse_args(argv)
+
+
+def report_main(argv: list[str]) -> int:
+    args = parse_report_args(argv)
+    if not args.db.exists():
+        print(f"FAIL: no existe {args.db}", file=sys.stderr)
+        return 2
+    history = History(args.db)
+    try:
+        if args.list:
+            for s in history.sessions():
+                print(f"{s['id']:>4}  {s['started_at']}  ->  {s['ended_at'] or 'en curso'}")
+            return 0
+        try:
+            html_text = build_report(history, args.session)
+        except ValueError as exc:
+            print(f"FAIL: {exc}", file=sys.stderr)
+            return 2
+        args.out.write_text(html_text, encoding="utf-8")
+        print(f"OK   informe HTML: {args.out}")
+        if args.pdf:
+            pdf = args.out.with_suffix(".pdf")
+            if render_pdf(args.out, pdf):
+                print(f"OK   informe PDF: {pdf}")
+            else:
+                print("WARN: no se pudo generar el PDF (¿falta chromium?)", file=sys.stderr)
+        return 0
+    finally:
+        history.close()
+
+
+DEFAULT_ALERT_URL = "https://n8n.nexuscloud.sbs/webhook/sentinel-alerts"
+DEFAULT_ALERT_SECRET = Path.home() / ".config" / "sentinel-lab" / "alert-secret"
+
+
+def alert_test_main(argv: list[str]) -> int:
+    """Queue one clearly labeled test alert and deliver it to n8n now."""
+    parser = argparse.ArgumentParser(prog="sentinel_gateway.py alert-test",
+                                     description="Send a signed test alert to n8n.")
+    parser.add_argument("--alert-webhook-url", default=DEFAULT_ALERT_URL)
+    parser.add_argument("--alert-secret-file", type=Path, default=DEFAULT_ALERT_SECRET)
+    parser.add_argument("--db", type=Path, default=None,
+                        help="history database (default: the gateway history)")
+    args = parser.parse_args(argv)
+    try:
+        secret = load_secret(args.alert_secret_file)
+    except (OSError, PermissionError, ValueError) as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return 2
+    history = History(args.db) if args.db else History()
+    session_id = history.start_session(GATEWAY_VERSION, "alert-test")
+    now = int(time.time() * 1000)
+    alert = {
+        "id": f"test-{uuid.uuid4().hex[:12]}", "rule": "test", "kind": "test",
+        "severity": "info", "title": "Prueba de alertas",
+        "message": "Mensaje de prueba del gateway SENTINEL-LAB. No es una medición.",
+        "occurredAt": utc_timestamp(), "occurredMs": now,
+        "device": {"bootId": None, "firmwareVersion": None}, "metrics": {},
+    }
+    history.add_alert(session_id, alert)
+    delivery = AlertDelivery(history, args.alert_webhook_url, secret, version=GATEWAY_VERSION)
+    sent = delivery.deliver_once()
+    history.end_session(session_id)
+    if sent:
+        print(f"OK: alerta de prueba {alert['id']} aceptada por n8n")
+        return 0
+    print(f"FAIL: no entregada ({delivery.last_error}); queda en cola si es reintentable",
+          file=sys.stderr)
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:1] == ["report"]:
+        return report_main(argv[1:])
+    if argv[:1] == ["alert-test"]:
+        return alert_test_main(argv[1:])
     args = parse_args(argv)
     if not hw.valid_host(args.device):
         print("FAIL: invalid --device host", file=sys.stderr)
@@ -342,27 +462,67 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, PermissionError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
+    secret = None
+    if args.alert_webhook_url and not args.alert_dry_run:
+        if not args.alert_secret_file:
+            print("FAIL: --alert-webhook-url requires --alert-secret-file", file=sys.stderr)
+            return 2
+        try:
+            secret = load_secret(args.alert_secret_file)
+        except (OSError, PermissionError, ValueError) as exc:
+            print(f"FAIL: {exc}", file=sys.stderr)
+            return 2
+
     state = GatewayState(clock_authority=bool(token))
     if not token:
         print("WARN: no bearer token; the gateway cannot synchronize the device clock",
               file=sys.stderr)
+    history = None if args.no_history else History(args.db)
+    session_id = history.start_session(GATEWAY_VERSION, args.device) if history else None
+    runtime = GatewayRuntime(history, AlertEngine(), session_id, dry_run=args.alert_dry_run)
+    delivery = None
+    if secret and history is not None:
+        try:
+            delivery = AlertDelivery(history, args.alert_webhook_url, secret,
+                                     version=GATEWAY_VERSION)
+        except ValueError as exc:
+            print(f"FAIL: {exc}", file=sys.stderr)
+            return 2
+        delivery.start()
+    elif args.alert_webhook_url and history is None and not args.alert_dry_run:
+        print("WARN: alert delivery needs history (store-and-forward); alerts disabled",
+              file=sys.stderr)
+
     link = None
     if not args.no_link:
-        link = DeviceLink(args.device, args.ws_port, token, state, args.log_jsonl)
+        link = DeviceLink(args.device, args.ws_port, token, state, args.log_jsonl,
+                          observer=runtime.on_message)
         link.start()
-    handler = make_handler(args.device, args.ws_port, args.web_root, state)
+    poller = None
+    if not args.no_poll:
+        poller = StatusPoller(args.device, runtime, interval_s=args.status_interval)
+        poller.start()
+    handler = make_handler(args.device, args.ws_port, args.web_root, state, runtime, delivery)
     server = ThreadingHTTPServer((args.bind, args.port), handler)
     print(f"SENTINEL gateway {GATEWAY_VERSION}: http://{args.bind}:{args.port} -> "
-          f"device {args.device} (clock authority: {'yes' if token else 'no'})")
+          f"device {args.device} (clock authority: {'yes' if token else 'no'}, "
+          f"history: {'on' if history else 'off'}, alerts: "
+          f"{'dry-run' if args.alert_dry_run else ('n8n' if delivery else 'local')})")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
-        if link:
-            link.stop()
-            link.join(timeout=3)
+        for worker in (link, poller, delivery):
+            if worker:
+                worker.stop()
+        for worker in (link, poller, delivery):
+            if worker:
+                worker.join(timeout=3)
         server.server_close()
+        if history is not None:
+            history.end_session(session_id)
+            history.close()
     return 0
 
 

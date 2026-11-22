@@ -1,0 +1,27 @@
+# systemd *user* unit for the SENTINEL-LAB gateway.
+# Installed by deploy/install-gateway-service.sh into
+# ~/.config/systemd/user/. Secrets never live here: the unit only points to
+# owner-only files configured in ~/.config/sentinel-lab/gateway.env.
+[Unit]
+Description=SENTINEL-LAB gateway (time authority, history, alerts)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/sentinel-lab/gateway.env
+ExecStart=/usr/bin/env python3 ${SENTINEL_REPO}/tools/sentinel_gateway.py \
+  --device ${SENTINEL_DEVICE} \
+  --bind ${SENTINEL_BIND} --port ${SENTINEL_PORT} \
+  --token-file ${SENTINEL_TOKEN_FILE} \
+  --db ${SENTINEL_DB} \
+  $SENTINEL_ALERT_ARGS
+Restart=on-failure
+RestartSec=10
+# Hardening that works in user units.
+NoNewPrivileges=yes
+PrivateTmp=yes
+UMask=0077
+
+[Install]
+WantedBy=default.target

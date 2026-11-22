@@ -4,3 +4,10 @@ bundleID: lab.sentinel.app
 product: SentinelLab
 infoPath: xtool-config/Info.plist
 iconPath: xtool-config/AppIcon.png
+# The Live Activity widget extension (SentinelLabWidget) is built by the
+# Xcode project (project.yml) but NOT by xtool: xtool 1.24 cannot sign app
+# extensions ("Can't find free space of LoadCommands", xtool-org/xtool#379)
+# and 2.0.0-beta.1 fails stripping the appex. Re-enable when fixed:
+# extensions:
+#   - product: SentinelLabWidget
+#     infoPath: xtool-config/SentinelLabWidget-Info.plist

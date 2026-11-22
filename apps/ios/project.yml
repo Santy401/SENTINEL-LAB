@@ -12,8 +12,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "1.1.0"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "1.2.0"
+    CURRENT_PROJECT_VERSION: "3"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
 packages:
@@ -29,6 +29,8 @@ targets:
       path: SentinelLab/Resources/Info.plist
     dependencies:
       - package: SentinelKit
+      - target: SentinelLabWidget
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: lab.sentinel.app
@@ -38,6 +40,25 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_PREVIEWS: YES
+  # Live Activity (Lock Screen / Dynamic Island) widget extension.
+  SentinelLabWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: SentinelLabWidget
+    info:
+      path: SentinelLabWidget/Resources/Info.plist
+    dependencies:
+      - package: SentinelKit
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: lab.sentinel.app.SentinelLabWidget
+        PRODUCT_NAME: SentinelLabWidget
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
   SentinelLabTests:
     type: bundle.unit-test
     platform: iOS

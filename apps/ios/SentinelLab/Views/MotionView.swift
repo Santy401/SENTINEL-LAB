@@ -29,6 +29,7 @@ struct MotionView: View {
                             scientific
                         }
                         streamCard
+                        hapticsNote
                         explanation
                     }
                 }
@@ -36,6 +37,12 @@ struct MotionView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Movimiento")
+            .onAppear { model.motionTabVisible = true }
+            .onDisappear {
+                model.motionTabVisible = false
+                model.haptics.stop()
+            }
+            .onChange(of: model.motion.snapshot.metrics.rmsMs2) { _, _ in model.hapticTick() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -187,6 +194,20 @@ struct MotionView: View {
             }
             if let error = model.motionSendError {
                 Label(error, systemImage: "exclamationmark.triangle").font(.footnote).foregroundStyle(.orange)
+            }
+        }
+    }
+
+    /// Haptic feedback status (the vibration follows the shake intensity).
+    private var hapticsNote: some View {
+        SectionCard(title: "Respuesta háptica", symbol: "iphone.radiowaves.left.and.right") {
+            if let reason = model.haptics.unavailableReason {
+                Label(reason, systemImage: "hand.raised").font(.subheadline).foregroundStyle(.secondary)
+            } else if model.settings.hapticsEnabled {
+                Text("El iPhone vibra con la misma escala que el LED del ESP32: 0 % en reposo, 100 % a 8 m/s².")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            } else {
+                Text("Desactivada en Ajustes.").font(.subheadline).foregroundStyle(.secondary)
             }
         }
     }

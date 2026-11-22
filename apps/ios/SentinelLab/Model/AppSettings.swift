@@ -18,6 +18,12 @@ final class AppSettings {
     var motionStreaming: Bool { didSet { defaults.set(motionStreaming, forKey: Keys.motionStreaming) } }
     /// Immersive (visual) vs scientific (numbers first) motion layout.
     var immersiveMotion: Bool { didSet { defaults.set(immersiveMotion, forKey: Keys.immersiveMotion) } }
+    /// Haptic feedback that follows the shake intensity (Movimiento tab).
+    var hapticsEnabled: Bool { didSet { defaults.set(hapticsEnabled, forKey: Keys.haptics) } }
+    /// Lock Screen Live Activity with the ESP32 status.
+    var liveActivityEnabled: Bool { didSet { defaults.set(liveActivityEnabled, forKey: Keys.liveActivity) } }
+    /// Local notifications for alerts while the app is in the background.
+    var alertNotifications: Bool { didSet { defaults.set(alertNotifications, forKey: Keys.alertNotifications) } }
     /// RF clientId the user identified as this iPhone (the ESP32 measures it).
     var thisClientId: UInt64? {
         didSet {
@@ -40,6 +46,9 @@ final class AppSettings {
         static let motionStreaming = "settings.motionStreaming"
         static let immersiveMotion = "settings.immersiveMotion"
         static let thisClientId = "settings.thisClientId"
+        static let haptics = "settings.haptics"
+        static let liveActivity = "settings.liveActivity"
+        static let alertNotifications = "settings.alertNotifications"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -52,6 +61,9 @@ final class AppSettings {
         motionStreaming = defaults.object(forKey: Keys.motionStreaming) as? Bool ?? true
         immersiveMotion = defaults.object(forKey: Keys.immersiveMotion) as? Bool ?? true
         thisClientId = defaults.string(forKey: Keys.thisClientId).flatMap(UInt64.init)
+        hapticsEnabled = defaults.object(forKey: Keys.haptics) as? Bool ?? true
+        liveActivityEnabled = defaults.object(forKey: Keys.liveActivity) as? Bool ?? false
+        alertNotifications = defaults.object(forKey: Keys.alertNotifications) as? Bool ?? true
         if let stored = defaults.string(forKey: Keys.deviceId) {
             deviceId = stored
         } else {
