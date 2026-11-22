@@ -3,7 +3,8 @@
 #
 #   apps/ios/scripts/linux-toolchain.sh                     # Swift + xtool
 #   apps/ios/scripts/linux-toolchain.sh --ubuntu-host HOST  # libxml2/ICU from an Ubuntu 24.04 host
-#   apps/ios/scripts/linux-toolchain.sh --sdk ~/Descargas/Xcode_27.1.xip
+#   apps/ios/scripts/linux-toolchain.sh --sdk ~/Downloads/Xcode_27.1.xip
+#   apps/ios/scripts/linux-toolchain.sh --sdk auto        # finds Xcode_27.1.xip in ~/Downloads or ~/Descargas
 #
 # Installs into ~/.local/share/sentinel-ios-toolchain (override with
 # SENTINEL_IOS_TOOLCHAIN). Every download is verified before use:
@@ -65,7 +66,10 @@ if [[ ! -x "$T/xtool/AppRun" ]]; then
 fi
 printf '#!/usr/bin/env bash\nexec "%s/xtool/AppRun" "$@"\n' "$T" > "$T/bin/xtool"
 chmod +x "$T/bin/xtool"
-ln -sf "$T/swift/usr/bin/swift" "$T/bin/swift"
+# xtool locates swift, swiftc and the SwiftPM tools through PATH.
+for tool in swift swiftc swift-build swift-package swift-run swift-test; do
+  ln -sf "$T/swift/usr/bin/$tool" "$T/bin/$tool"
+done
 
 # 3. Libraries the Ubuntu-built toolchain expects but Arch names differently.
 ln -sf /usr/lib/libncursesw.so.6 "$T/lib/libncurses.so.6"
@@ -110,15 +114,29 @@ missing=$(for b in swift-driver swift-frontend swift-build swift-package lld; do
   ldd "$T/swift/usr/bin/$b" 2>/dev/null | grep 'not found' || true; done)
 if [[ -n "$missing" ]]; then echo "FAIL: unresolved libraries:"; echo "$missing"; exit 1; fi
 
-export PATH="$T/bin:$PATH"
+export PATH="$T/bin:$T/swift/usr/bin:$PATH"
 say "$(swift --version 2>&1 | head -1)"
 say "xtool $(xtool --version 2>/dev/null || echo "${XTOOL_VERSION}")"
 
 # 5. Darwin SDK from Apple's Xcode.xip (downloaded by you, signed by Apple).
+if [[ "$XIP" == "auto" ]]; then
+  XIP=""
+  for dir in "$HOME/Downloads" "$HOME/Descargas" "${XDG_DOWNLOAD_DIR:-}"; do
+    [[ -n "$dir" ]] || continue
+    for candidate in "$dir/Xcode_27.1.xip" "$dir/Xcode 27.1.xip"; do
+      [[ -f "$candidate" ]] && { XIP="$candidate"; break 2; }
+    done
+  done
+  [[ -n "$XIP" ]] || { echo "FAIL: Xcode_27.1.xip not found in ~/Downloads or ~/Descargas" >&2; exit 1; }
+fi
 if [[ -n "$XIP" ]]; then
   [[ -f "$XIP" ]] || { echo "FAIL: $XIP not found" >&2; exit 1; }
   say "Installing the Darwin SDK from $(basename "$XIP") (this takes a while)"
   xtool sdk install "$XIP"
+  if xtool sdk status 2>&1 | grep -q "Not installed"; then
+    echo "FAIL: xtool finished but the Darwin SDK is not registered" >&2
+    exit 1
+  fi
 fi
 say "SDK: $(xtool sdk status 2>&1 | head -1)"
 
@@ -129,7 +147,7 @@ Add the toolchain to your shell (once):
 
 Next steps (docs/ios/LINUX.md):
   1. Download Xcode 27.1 (.xip) at https://developer.apple.com/download/all/?q=Xcode
-     and run: $0 --sdk /path/to/Xcode_27.1.xip
+     and run: $0 --sdk auto   (or --sdk ~/Downloads/Xcode_27.1.xip)
   2. Log in once (interactive; never pass the password as an argument):
      xtool auth login --mode password
   3. apps/ios/scripts/linux-install.sh [--via home-server]
