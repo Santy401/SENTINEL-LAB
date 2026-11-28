@@ -40,7 +40,7 @@ jobs:
   xtool-package:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build SwiftPM adapter for iOS (unsigned)
         working-directory: apps/ios
         run: |
